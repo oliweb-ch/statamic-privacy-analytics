@@ -1,243 +1,184 @@
-# Enhanced Analytics for Statamic
+# Privacy Analytics for Statamic
 
-A powerful analytics addon for Statamic that provides detailed insights into your website's traffic and user behavior.
+A self-hosted, privacy-first analytics addon for Statamic. No Google. No third-party scripts. No cookies by default. Your data stays on your server.
+
+> Fork of [mohammedshuaau/enhanced-analytics](https://github.com/mohammedshuaau/enhanced-analytics) — significantly extended and refactored.
+
+## Why this addon?
+
+- **Zero external tracking dependencies** — no Google Analytics, no Matomo cloud, no Plausible cloud
+- **Direct DB writes** — every page view is recorded instantly, no processing queue needed for real-time data
+- **GDPR-ready** — built-in consent banner with granular controls (optional)
+- **Self-hosted geolocation** — IP → country/city via [ip-api.com](https://ip-api.com) with local caching, no Google Maps
+
+---
 
 ## Features
 
-### 📊 Real-Time Analytics
-- Page view tracking with automatic data processing
-- Unique visitor identification and session management
-- Configurable processing frequency (default: every 15 minutes)
-- Automatic data aggregation for efficient querying
+### Dashboard
+- Date ranges : 24h, 7 days, 30 days, custom
+- Comparison with previous period (visits, unique visitors, bounce rate)
+- CSV export
+- Auto-refresh (configurable interval)
+- Dark mode support
 
-### 👥 Visitor Insights
-- Total visits and unique visitors
-- New vs returning visitors
-- Session duration and pages per session
-- Bounce rate and exit rate analysis
-- User flow tracking (entry pages, engaged pages, exit pages)
+### Widgets
+| Widget | Description |
+|---|---|
+| Overview | Total visits, unique visitors, avg. time on site, bounce rate |
+| Visit frequency | New vs returning, pages/session, avg. session duration |
+| Page views over time | Line chart, total + unique views per day |
+| Top countries | Bar chart + table with % of total |
+| Device types | Doughnut chart (desktop / mobile / tablet) |
+| Browser usage | Doughnut chart |
+| **Traffic sources** | Direct / Search / Social / Referral + top referring domains |
+| **Platforms / OS** | Horizontal bar chart |
+| **Top cities** | Table with progress bars |
+| **Activity heatmap** | 7-day × 24-hour CSS grid, intensity-based coloring |
+| **Real-time visitors** | Active sessions/visitors in the last 5 / 15 / 30 min, auto-refresh every 30s |
+| **New vs returning trend** | Stacked area chart over the selected period |
+| **Session depth** | Page distribution per session (1 / 2-3 / 4-5 / 6-10 / 10+) |
+| Page performance | Top 10 pages: views, unique views, avg. time, bounce rate, exit rate |
+| User flow | Entry pages, most engaged pages, exit pages |
 
-### 🌍 Geographic Data
-- IP-based geolocation using ip-api.com
-- Country and city-level tracking
-- Built-in rate limiting (45 requests/minute)
-- Automatic caching of geolocation data
-- Configurable cache duration
-
-### 💻 Technical Insights
-- Device type tracking (desktop, mobile, tablet)
-- Browser and platform detection
-- Referrer URL tracking
-- User agent analysis
-
-### ⚡ Performance Features
-- Efficient data caching system
-- Support for file caching
-- Automatic cleanup of old data
-- Chunk-based processing to prevent memory issues
-- Lock system to prevent concurrent processing
-
-### 🎨 Dashboard Features
-- Clean, modern interface with dark mode support
-- Polled data refresh
-- Customizable date ranges (24h, 7d, 30d, custom)
-- Comparative metrics with previous periods
-- Export functionality for detailed analysis
-- Interactive charts and visualizations
-
-### 🔒 Privacy & Security
-- Built-in consent management system (disabled by default)
-- No external service dependencies
-- Complete data ownership
-- Configurable IP address exclusions
+### Privacy & tracking
+- Consent banner (disabled by default) with granular controls
 - Bot filtering
-- Authenticated user tracking options
-- Granular consent controls for visitors
-- Optional geolocation tracking toggle
+- Configurable excluded paths and IPs
+- Optional authenticated user tracking
+- Geolocation optional per-visitor via consent settings
+
+---
+
+## Requirements
+
+- PHP ≥ 8.3
+- Statamic ≥ 6.0
+- MariaDB / MySQL
+
+---
 
 ## Installation
 
-1. Install the package via Composer:
 ```bash
-composer require mohammedshuaau/enhanced-analytics
+composer require oliweb/statamic-privacy-analytics
 ```
 
-2. Publish the configuration:
+Publish the configuration:
 ```bash
-php artisan vendor:publish --tag=enhanced-analytics-config
+php artisan vendor:publish --tag=statamic-analytics-config
 ```
 
-3. Run the migrations:
+Run the migrations:
 ```bash
 php artisan migrate
 ```
 
+The addon starts tracking immediately. Access the dashboard via **Control Panel → Tools → Analytics**.
+
+---
+
 ## Configuration
 
-The addon can be configured via the `config/enhanced-analytics.php` file:
+`config/statamic-analytics.php` :
 
 ```php
 return [
-    'cache' => [
-        'driver' => 'file', // Options: 'file', 'redis'
-        'file' => [
-            'path' => storage_path('app/enhanced-analytics'),
-            'permissions' => [
-                'file' => 0644,
-                'directory' => 0755
-            ]
-        ]
-    ],
-
     'geolocation' => [
-        'cache_duration' => 1440, // 24 hours
-        'rate_limit' => 45 // requests per minute
+        'cache_duration' => 1440, // minutes (24h)
+        'rate_limit'     => 45,   // requests per minute (ip-api.com free tier)
     ],
 
     'processing' => [
-        'frequency' => 15, // minutes
-        'chunk_size' => 1000,
-        'lock_timeout' => 60
+        'frequency'    => 15, // minutes — aggregate recalculation frequency
+        'lock_timeout' => 60,
+    ],
+
+    'dashboard' => [
+        'refresh_interval' => 300, // seconds
     ],
 
     'tracking' => [
-        'exclude_paths' => [
-            'cp/*',
-            'api/*'
-        ],
-        'exclude_ips' => [],
-        'exclude_bots' => true,
+        'exclude_paths' => ['cp/*', 'api/*'],
+        'exclude_ips'   => [],
+        'exclude_bots'  => true,
         'track_authenticated_users' => true,
         'consent' => [
-            'enabled' => false, // Set to true to enable consent banner
-            'banner' => [
-                'title' => 'Privacy Notice',
-                'description' => 'We use analytics to understand how you use our website and improve your experience.',
-                'accept_button' => 'Accept',
+            'enabled' => false, // set to true to require visitor consent
+            'banner'  => [
+                'title'          => 'Privacy Notice',
+                'description'    => 'We use analytics to understand how visitors use our site.',
+                'accept_button'  => 'Accept',
                 'decline_button' => 'Decline',
-                'settings_button' => 'Customize',
-                'position' => 'bottom', // options: bottom, top, center
+                'settings_button'=> 'Customize',
+                'position'       => 'bottom', // bottom | top | center
             ],
         ],
-    ]
+    ],
 ];
 ```
 
-### Consent Banner Configuration
+---
 
-The addon includes a privacy-focused consent banner that's disabled by default. Here's how to configure it:
+## Consent banner
 
-1. Enable the consent banner by setting `tracking.consent.enabled` to `true` in your config file.
+When `tracking.consent.enabled` is `true`, tracking only starts after visitor consent.
 
-2. Add the consent banner and CSRF token (header meta tag) to your layout:
+Add to your Antlers layout:
+
 ```antlers
-{{ enhanced_analytics:consent_banner }}
-```
-
-```html
+{{ statamic_analytics:consent_banner }}
 <meta name="csrf-token" content="{{ csrf_token }}">
 ```
 
-3. Customize the banner appearance and text:
-```php
-'consent' => [
-    'enabled' => true,
-    'banner' => [
-        'title' => 'Your Custom Title',
-        'description' => 'Your custom description about tracking.',
-        'accept_button' => 'Allow Tracking',
-        'decline_button' => 'No Thanks',
-        'settings_button' => 'Preferences',
-        'position' => 'bottom', // Available options: bottom, top, center
-    ],
-],
-```
-
-### Customizing the Consent Banner Template
-
-You can fully customize the consent banner's appearance by publishing and editing its template:
-
-1. Publish the consent banner template:
+Publish and customize the template:
 ```bash
-php artisan vendor:publish --tag="enhanced-analytics-views"
+php artisan vendor:publish --tag=statamic-analytics-views
 ```
 
-2. Edit the template at:
+Template location after publishing:
 ```
-resources/views/vendor/enhanced-analytics/components/consent-banner.antlers.html
+resources/views/vendor/statamic-analytics/components/consent-banner.antlers.html
 ```
 
-The template uses Alpine.js for interactivity and Tailwind CSS for styling. You can modify the HTML structure, styling, and behavior while maintaining the core functionality through the following data attributes:
+---
 
-- `x-data="consentBanner"`: The main component
-- `x-model="settings.geolocation"`: Geolocation toggle binding
-- `x-on:click="accept"`: Accept button action
-- `x-on:click="decline"`: Decline button action
-- `x-on:click="toggleSettings"`: Settings toggle action
+## Aggregate recalculation
 
-The consent banner includes:
-- Essential analytics toggle (always enabled)
-- Optional geolocation tracking toggle
-- Persistent settings through session storage
-- Responsive design with dark mode support
+The addon writes page views directly to the database on every request. A scheduled command recalculates aggregates (by country, device, browser, platform) for today and yesterday:
 
-When enabled, tracking will only begin after the visitor provides consent. Their preferences are saved and respected across sessions.
-
-## Usage
-
-Once installed, the addon will automatically start tracking page visits. Access the analytics dashboard via the Control Panel under Tools > Analytics.
-
-### Automatic Processing
-
-The addon automatically processes analytics data via Scheduler. You might want to run the scheduler and the addon will handle the rest. You can always set the minutes the command should execute.
-
-### Manual Processing
-
-You can manually process analytics data using the command:
 ```bash
 php artisan analytics:process
 ```
 
-### Data Export
+This runs automatically via Laravel Scheduler at the frequency defined in config. Make sure the scheduler is running:
 
-Export detailed analytics data directly from the dashboard in CSV format for further analysis.
-
-## Performance Considerations
-
-- The addon uses efficient caching and processes data in chunks to maintain performance
-- Geolocation data is cached to respect API rate limits
-- Database queries are optimized using aggregates for faster dashboard loading
-- Automatic cleanup of old cache data
-
-### Upcoming Features
-
-- Support for Redis Driver
-
-
-## Contributing
-
-Contributions are always welcome!
-
-### Development Guidelines
-
-- Follow PSR-12 coding standards
-- Add appropriate comments and documentation
-- Update the README.md with details of significant changes
-- Add/update tests as needed
-- Ensure all tests pass before submitting PR
-
-### Testing
-
-Run the test suite:
 ```bash
-vendor/bin/phpunit
+* * * * * cd /path-to-your-project && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-## Support
+---
 
-If you discover any security-related issues, please use the issue tracker to report them.
+## Architecture
 
+```
+HTTP request
+    └─ TrackPageVisit middleware
+           └─ INSERT into statamic_analytics_page_views   ← direct, real-time
+
+Scheduler (every N minutes)
+    └─ analytics:process
+           └─ DELETE + INSERT into statamic_analytics_aggregates
+              (recalculated from page_views for today + yesterday)
+```
+
+Geolocation (IP → country/city) is resolved via ip-api.com and cached locally. No data is sent to Google or any tracking platform.
+
+---
 
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+MIT — see [LICENSE.md](LICENSE.md).
+
+Original work © 2024 Mohammed Shuaau.
+Modifications © 2026 Olivier (oliweb).
