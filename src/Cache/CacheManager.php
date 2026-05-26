@@ -1,6 +1,6 @@
 <?php
 
-namespace Oli217\EnhancedAnalytics\Cache;
+namespace Oliweb\StatamicAnalytics\Cache;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
@@ -24,7 +24,7 @@ class CacheManager
         ],
         'redis' => [
             'connection' => 'default',
-            'prefix' => 'enhanced_analytics_'
+            'prefix' => 'statamic_analytics_'
         ],
         'ttl' => 86400 // 24 hours
     ];
@@ -32,12 +32,12 @@ class CacheManager
     public function __construct()
     {
         // Set default storage path
-        $this->defaultConfig['file']['path'] = storage_path('app/enhanced-analytics');
+        $this->defaultConfig['file']['path'] = storage_path('app/statamic-analytics');
 
         // Merge default config with user config
         $this->config = array_merge(
             $this->defaultConfig,
-            config('enhanced-analytics.cache') ?? []
+            config('statamic-analytics.cache') ?? []
         );
 
         // Ensure nested config arrays exist

@@ -29,8 +29,8 @@ export default defineConfig({
         laravel({
             input: [
                 'resources/js/consent-banner.js',
-                'resources/js/enhanced-analytics.js',
-                'resources/css/enhanced-analytics.css'
+                'resources/js/statamic-analytics.js',
+                'resources/css/statamic-analytics.css'
             ],
             publicDirectory: 'resources/dist',
         }),

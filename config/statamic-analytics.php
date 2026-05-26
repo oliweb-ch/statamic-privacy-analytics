@@ -15,7 +15,7 @@ return [
 
         // File driver specific settings
         'file' => [
-            'path' => storage_path('app/enhanced-analytics'),
+            'path' => storage_path('app/statamic-analytics'),
             'permissions' => [
                 'file' => 0644,
                 'directory' => 0755

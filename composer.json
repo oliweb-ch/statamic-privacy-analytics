@@ -1,12 +1,12 @@
 {
-    "name": "oli217/enhanced-analytics",
+    "name": "oliweb/statamic-analytics",
     "description": "A powerful, efficient analytics solution for Statamic with real-time tracking, caching, and comprehensive dashboard visualization.",
     "type": "statamic-addon",
     "keywords": [
         "statamic",
         "statamic-addon",
         "analytics",
-        "enhanced-analytics",
+        "statamic-analytics",
         "enhanced",
         "real-time",
         "tracking",
@@ -19,22 +19,22 @@
     ],
     "autoload": {
         "psr-4": {
-            "Oli217\\EnhancedAnalytics\\": "src"
+            "Oliweb\\StatamicAnalytics\\": "src"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Oli217\\EnhancedAnalytics\\Tests\\": "tests"
+            "Oliweb\\StatamicAnalytics\\Tests\\": "tests"
         }
     },
     "extra": {
         "statamic": {
-            "name": "Enhanced Analytics",
-            "description": "A powerful, efficient analytics solution for Statamic"
+            "name": "Statamic Analytics",
+            "description": "A powerful, efficient analytics solution for Statamic with real-time tracking and comprehensive dashboard"
         },
         "laravel": {
             "providers": [
-                "Oli217\\EnhancedAnalytics\\ServiceProvider"
+                "Oliweb\\StatamicAnalytics\\ServiceProvider"
             ]
         }
     },

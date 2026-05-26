@@ -1,11 +1,11 @@
 {
-  "resources/css/enhanced-analytics.css": {
-    "file": "assets/enhanced-analytics-X5sk5BJp.css",
-    "src": "resources/css/enhanced-analytics.css",
+  "resources/css/statamic-analytics.css": {
+    "file": "assets/statamic-analytics-X5sk5BJp.css",
+    "src": "resources/css/statamic-analytics.css",
     "isEntry": true,
-    "name": "enhanced-analytics",
+    "name": "statamic-analytics",
     "names": [
-      "enhanced-analytics.css"
+      "statamic-analytics.css"
     ]
   },
   "resources/js/consent-banner.js": {
@@ -14,10 +14,10 @@
     "src": "resources/js/consent-banner.js",
     "isEntry": true
   },
-  "resources/js/enhanced-analytics.js": {
-    "file": "assets/enhanced-analytics-B-NRNSMs.js",
-    "name": "enhanced-analytics",
-    "src": "resources/js/enhanced-analytics.js",
+  "resources/js/statamic-analytics.js": {
+    "file": "assets/statamic-analytics-B-NRNSMs.js",
+    "name": "statamic-analytics",
+    "src": "resources/js/statamic-analytics.js",
     "isEntry": true
   }
 }

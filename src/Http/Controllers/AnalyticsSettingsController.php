@@ -1,27 +1,27 @@
 <?php
 
-namespace Oli217\EnhancedAnalytics\Http\Controllers;
+namespace Oliweb\StatamicAnalytics\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Oli217\EnhancedAnalytics\Middleware\TrackPageVisit;
+use Oliweb\StatamicAnalytics\Middleware\TrackPageVisit;
 
 class AnalyticsSettingsController
 {
     public function index()
     {
-        return view('enhanced-analytics::settings', [
+        return view('statamic-analytics::settings', [
             'stats' => TrackPageVisit::getGeolocationStats(),
             'config' => [
-                'cache_driver' => config('enhanced-analytics.cache.driver'),
-                'geolocation_cache_duration' => config('enhanced-analytics.geolocation.cache_duration'),
-                'geolocation_rate_limit' => config('enhanced-analytics.geolocation.rate_limit'),
-                'processing_frequency' => config('enhanced-analytics.processing.frequency'),
-                'processing_chunk_size' => config('enhanced-analytics.processing.chunk_size'),
-                'excluded_ips' => config('enhanced-analytics.tracking.exclude_ips'),
-                'excluded_paths' => config('enhanced-analytics.tracking.exclude_paths'),
-                'exclude_bots' => config('enhanced-analytics.tracking.exclude_bots'),
-                'track_authenticated_users' => config('enhanced-analytics.tracking.track_authenticated_users'),
+                'cache_driver' => config('statamic-analytics.cache.driver'),
+                'geolocation_cache_duration' => config('statamic-analytics.geolocation.cache_duration'),
+                'geolocation_rate_limit' => config('statamic-analytics.geolocation.rate_limit'),
+                'processing_frequency' => config('statamic-analytics.processing.frequency'),
+                'processing_chunk_size' => config('statamic-analytics.processing.chunk_size'),
+                'excluded_ips' => config('statamic-analytics.tracking.exclude_ips'),
+                'excluded_paths' => config('statamic-analytics.tracking.exclude_paths'),
+                'exclude_bots' => config('statamic-analytics.tracking.exclude_bots'),
+                'track_authenticated_users' => config('statamic-analytics.tracking.track_authenticated_users'),
             ]
         ]);
     }

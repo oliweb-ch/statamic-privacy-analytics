@@ -1,6 +1,6 @@
 <?php
 
-namespace Oli217\EnhancedAnalytics\Commands;
+namespace Oliweb\StatamicAnalytics\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +17,7 @@ class ProcessAnalytics extends Command
     {
         $this->info('Processing analytics aggregates...');
 
-        $lock = Cache::lock('enhanced-analytics:processing', config('enhanced-analytics.processing.lock_timeout', 60));
+        $lock = Cache::lock('statamic-analytics:processing', config('statamic-analytics.processing.lock_timeout', 60));
 
         try {
             if (!$lock->get()) {
@@ -54,14 +54,14 @@ class ProcessAnalytics extends Command
 
         foreach ($dimensions as $dimension) {
             // Delete existing aggregates for this date/dimension
-            DB::table('enhanced_analytics_aggregates')
+            DB::table('statamic_analytics_aggregates')
                 ->where('type', 'daily')
                 ->where('date', $date)
                 ->where('dimension', $dimension)
                 ->delete();
 
             // Re-insert from page_views
-            $rows = DB::table('enhanced_analytics_page_views')
+            $rows = DB::table('statamic_analytics_page_views')
                 ->select(
                     DB::raw("'{$dimension}' as dimension"),
                     DB::raw("{$dimension} as dimension_value"),
@@ -78,7 +78,7 @@ class ProcessAnalytics extends Command
 
             $now = Carbon::now();
             foreach ($rows as $row) {
-                DB::table('enhanced_analytics_aggregates')->insert([
+                DB::table('statamic_analytics_aggregates')->insert([
                     'type'              => 'daily',
                     'date'              => $date,
                     'dimension'         => $dimension,

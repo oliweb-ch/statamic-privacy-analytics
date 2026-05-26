@@ -1,6 +1,6 @@
 <?php
 
-namespace Oli217\EnhancedAnalytics\Middleware;
+namespace Oliweb\StatamicAnalytics\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
@@ -33,10 +33,10 @@ class TrackPageVisit
             }
 
             // Try to get from cache first
-            $cacheKey = 'enhanced_analytics_geo_' . $ipAddress;
-            $cacheDuration = config('enhanced-analytics.geolocation.cache_duration', 60 * 24);
-            $rateLimitKey = 'enhanced_analytics_geo_ratelimit';
-            $rateLimit = config('enhanced-analytics.geolocation.rate_limit', 45);
+            $cacheKey = 'statamic_analytics_geo_' . $ipAddress;
+            $cacheDuration = config('statamic-analytics.geolocation.cache_duration', 60 * 24);
+            $rateLimitKey = 'statamic_analytics_geo_ratelimit';
+            $rateLimit = config('statamic-analytics.geolocation.rate_limit', 45);
 
             // Check rate limit
             $currentMinute = now()->format('Y-m-d H:i');
@@ -88,7 +88,7 @@ class TrackPageVisit
 
     protected function getFallbackGeolocationData($ipAddress)
     {
-        $historicalKey = 'enhanced_analytics_historical_geo';
+        $historicalKey = 'statamic_analytics_historical_geo';
         $historicalData = Cache::get($historicalKey, []);
 
         return $historicalData[$ipAddress] ?? [
@@ -100,7 +100,7 @@ class TrackPageVisit
 
     protected function trackGeolocationLookup($ipAddress, $success)
     {
-        $statsKey = 'enhanced_analytics_geolocation_stats';
+        $statsKey = 'statamic_analytics_geolocation_stats';
         $stats = Cache::get($statsKey, [
             'total_lookups' => 0,
             'successful_lookups' => 0,
@@ -127,7 +127,7 @@ class TrackPageVisit
 
     public static function getGeolocationStats()
     {
-        $statsKey = 'enhanced_analytics_geolocation_stats';
+        $statsKey = 'statamic_analytics_geolocation_stats';
         return Cache::get($statsKey, [
             'total_lookups' => 0,
             'successful_lookups' => 0,
@@ -139,8 +139,8 @@ class TrackPageVisit
 
     public static function clearGeolocationCache()
     {
-        $pattern = 'enhanced_analytics_geo_*';
-        $keys = Cache::get('enhanced_analytics_cache_keys', []);
+        $pattern = 'statamic_analytics_geo_*';
+        $keys = Cache::get('statamic_analytics_cache_keys', []);
 
         foreach ($keys as $key) {
             if (Str::is($pattern, $key)) {
@@ -148,8 +148,8 @@ class TrackPageVisit
             }
         }
 
-        Cache::forget('enhanced_analytics_geolocation_stats');
-        Cache::forget('enhanced_analytics_cache_keys');
+        Cache::forget('statamic_analytics_geolocation_stats');
+        Cache::forget('statamic_analytics_cache_keys');
     }
 
     public function handle(Request $request, Closure $next)
@@ -204,7 +204,7 @@ class TrackPageVisit
                 $lastVisitHour = $request->session()->get('last_visit_hour');
 
                 // Write directly to DB
-                DB::table('enhanced_analytics_page_views')->insert([
+                DB::table('statamic_analytics_page_views')->insert([
                     'page_url'          => $pageUrl,
                     'ip_address'        => $ipAddress,
                     'user_agent'        => $request->userAgent(),
@@ -244,7 +244,7 @@ class TrackPageVisit
     protected function shouldTrack(Request $request): bool
     {
         // Check if consent is enabled and given
-        if (config('enhanced-analytics.tracking.consent.enabled', true)) {
+        if (config('statamic-analytics.tracking.consent.enabled', true)) {
             $consent = session('analytics_consent');
 
             if (is_null($consent)) {
@@ -258,10 +258,10 @@ class TrackPageVisit
             }
         }
 
-        $excludedPaths = config('enhanced-analytics.tracking.exclude_paths', []);
-        $excludedIps = config('enhanced-analytics.tracking.exclude_ips', []);
-        $excludeBots = config('enhanced-analytics.tracking.exclude_bots', true);
-        $trackAuthenticated = config('enhanced-analytics.tracking.track_authenticated_users', true);
+        $excludedPaths = config('statamic-analytics.tracking.exclude_paths', []);
+        $excludedIps = config('statamic-analytics.tracking.exclude_ips', []);
+        $excludeBots = config('statamic-analytics.tracking.exclude_bots', true);
+        $trackAuthenticated = config('statamic-analytics.tracking.track_authenticated_users', true);
 
         foreach ($excludedPaths as $path) {
             if (Str::is($path, $request->path())) {

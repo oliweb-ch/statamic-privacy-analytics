@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Oli217\EnhancedAnalytics\Http\Controllers\ConsentController;
+use Oliweb\StatamicAnalytics\Http\Controllers\ConsentController;
 
-Route::post('/enhanced-analytics/consent', [ConsentController::class, 'store'])
+Route::post('/statamic-analytics/consent', [ConsentController::class, 'store'])
     ->middleware(['web']); 

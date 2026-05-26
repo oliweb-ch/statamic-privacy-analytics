@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up()
     {
-        Schema::create('enhanced_analytics_page_views', function (Blueprint $table) {
+        Schema::create('statamic_analytics_page_views', function (Blueprint $table) {
             $table->id();
             $table->string('page_url');
             $table->string('ip_address');
@@ -39,7 +39,7 @@ return new class extends Migration
             $table->index(['is_new_day_visit']);
         });
 
-        Schema::create('enhanced_analytics_aggregates', function (Blueprint $table) {
+        Schema::create('statamic_analytics_aggregates', function (Blueprint $table) {
             $table->id();
             $table->string('type'); // daily, weekly, monthly
             $table->date('date');
@@ -58,7 +58,7 @@ return new class extends Migration
 
     public function down()
     {
-        Schema::dropIfExists('enhanced_analytics_page_views');
-        Schema::dropIfExists('enhanced_analytics_aggregates');
+        Schema::dropIfExists('statamic_analytics_page_views');
+        Schema::dropIfExists('statamic_analytics_aggregates');
     }
 }; 

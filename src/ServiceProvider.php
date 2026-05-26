@@ -1,6 +1,6 @@
 <?php
 
-namespace Oli217\EnhancedAnalytics;
+namespace Oliweb\StatamicAnalytics;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\File;
@@ -40,8 +40,8 @@ class ServiceProvider extends AddonServiceProvider
     protected $vite = [
         'input' => [
             'resources/js/consent-banner.js',
-            'resources/js/enhanced-analytics.js',
-            'resources/css/enhanced-analytics.css'
+            'resources/js/statamic-analytics.js',
+            'resources/css/statamic-analytics.css'
         ],
         'publicDirectory' => 'resources/dist',
     ];
@@ -49,31 +49,31 @@ class ServiceProvider extends AddonServiceProvider
     public function bootAddon()
     {
         // Load translations
-        $this->loadTranslationsFrom(__DIR__ . '/../resources/lang', 'enhanced-analytics');
+        $this->loadTranslationsFrom(__DIR__ . '/../resources/lang', 'statamic-analytics');
 
         // Publish configuration
         $this->publishes([
-            __DIR__ . '/../config/enhanced-analytics.php' => config_path('enhanced-analytics.php'),
-        ], 'enhanced-analytics-config');
+            __DIR__ . '/../config/statamic-analytics.php' => config_path('statamic-analytics.php'),
+        ], 'statamic-analytics-config');
 
         // Merge configuration early so we can use it
         $this->mergeConfigFrom(
-            __DIR__ . '/../config/enhanced-analytics.php', 'enhanced-analytics'
+            __DIR__ . '/../config/statamic-analytics.php', 'statamic-analytics'
         );
 
         // Publish views/components
         $this->publishes([
-            __DIR__ . '/../resources/views/components/consent-banner.antlers.html' => resource_path('views/vendor/enhanced-analytics/components/consent-banner.antlers.html'),
-        ], 'enhanced-analytics-views');
+            __DIR__ . '/../resources/views/components/consent-banner.antlers.html' => resource_path('views/vendor/statamic-analytics/components/consent-banner.antlers.html'),
+        ], 'statamic-analytics-views');
 
         // Ensure storage directory exists with proper permissions (if using file driver)
         $this->ensureStorageDirectoryExists();
 
         // Register the nav item
         Nav::extend(function ($nav) {
-            $nav->create(__('enhanced-analytics::messages.nav_item'))
+            $nav->create(__('statamic-analytics::messages.nav_item'))
                 ->section('Tools')
-                ->route('enhanced-analytics.index')
+                ->route('statamic-analytics.index')
                 ->icon('chart-monitoring-indicator');
         });
 
@@ -83,7 +83,7 @@ class ServiceProvider extends AddonServiceProvider
         // Register scheduled tasks
         $this->app->booted(function () {
             $schedule = $this->app->make(Schedule::class);
-            $frequency = config('enhanced-analytics.processing.frequency', 15);
+            $frequency = config('statamic-analytics.processing.frequency', 15);
 
             // Generate the cron expression for custom minutes
             $cronExpression = "*/{$frequency} * * * *";
@@ -99,9 +99,9 @@ class ServiceProvider extends AddonServiceProvider
     {
         try {
             // Only create directory if using file driver
-            if (config('enhanced-analytics.cache.driver') === 'file') {
-                $path = config('enhanced-analytics.cache.file.path', storage_path('app/enhanced-analytics'));
-                $permissions = config('enhanced-analytics.cache.file.permissions.directory', 0755);
+            if (config('statamic-analytics.cache.driver') === 'file') {
+                $path = config('statamic-analytics.cache.file.path', storage_path('app/statamic-analytics'));
+                $permissions = config('statamic-analytics.cache.file.permissions.directory', 0755);
 
                 if (!File::exists($path)) {
                     File::makeDirectory($path, $permissions, true);

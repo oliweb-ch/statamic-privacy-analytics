@@ -1,6 +1,6 @@
 <?php
 
-namespace Oli217\EnhancedAnalytics\Http\Controllers;
+namespace Oliweb\StatamicAnalytics\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,21 +13,21 @@ class AnalyticsDashboardController
 {
     public function index()
     {
-        return Inertia::render('EnhancedAnalytics/Dashboard', [
+        return Inertia::render('StatamicAnalytics/Dashboard', [
             'config' => [
-                'refreshInterval'    => config('enhanced-analytics.dashboard.refresh_interval', 300),
-                'cacheDuration'      => config('enhanced-analytics.geolocation.cache_duration', 1440),
-                'rateLimit'          => config('enhanced-analytics.geolocation.rate_limit', 45),
-                'processingFrequency'=> config('enhanced-analytics.processing.frequency', 15),
+                'refreshInterval'    => config('statamic-analytics.dashboard.refresh_interval', 300),
+                'cacheDuration'      => config('statamic-analytics.geolocation.cache_duration', 1440),
+                'rateLimit'          => config('statamic-analytics.geolocation.rate_limit', 45),
+                'processingFrequency'=> config('statamic-analytics.processing.frequency', 15),
                 'routes' => [
-                    'data'       => cp_route('enhanced-analytics.data'),
-                    'export'     => cp_route('enhanced-analytics.export'),
-                    'clearCache' => cp_route('enhanced-analytics.clear-cache'),
-                    'geoStats'   => cp_route('enhanced-analytics.geo-stats'),
-                    'realtime'   => cp_route('enhanced-analytics.realtime'),
+                    'data'       => cp_route('statamic-analytics.data'),
+                    'export'     => cp_route('statamic-analytics.export'),
+                    'clearCache' => cp_route('statamic-analytics.clear-cache'),
+                    'geoStats'   => cp_route('statamic-analytics.geo-stats'),
+                    'realtime'   => cp_route('statamic-analytics.realtime'),
                 ],
             ],
-            'translations' => trans('enhanced-analytics::messages'),
+            'translations' => trans('statamic-analytics::messages'),
         ]);
     }
 
@@ -75,7 +75,7 @@ class AnalyticsDashboardController
     {
         $threshold = Carbon::now()->subMinutes(30);
 
-        $totals = DB::table('enhanced_analytics_page_views')
+        $totals = DB::table('statamic_analytics_page_views')
             ->where('visited_at', '>=', $threshold)
             ->select(
                 DB::raw('COUNT(DISTINCT session_id) as active_sessions'),
@@ -87,7 +87,7 @@ class AnalyticsDashboardController
         $breakdowns = [];
         foreach ([5, 15, 30] as $minutes) {
             $since = Carbon::now()->subMinutes($minutes);
-            $breakdowns["last_{$minutes}min"] = DB::table('enhanced_analytics_page_views')
+            $breakdowns["last_{$minutes}min"] = DB::table('statamic_analytics_page_views')
                 ->where('visited_at', '>=', $since)
                 ->select(
                     DB::raw('COUNT(DISTINCT session_id) as active_sessions'),
@@ -119,16 +119,16 @@ class AnalyticsDashboardController
 
     protected function getOverviewStats($startDate, $endDate)
     {
-        $totalVisits = DB::table('enhanced_analytics_page_views')
+        $totalVisits = DB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->count();
 
-        $uniqueVisitors = DB::table('enhanced_analytics_page_views')
+        $uniqueVisitors = DB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->where('is_new_visitor', true)
             ->count();
 
-        $bounceRate = DB::table('enhanced_analytics_page_views')
+        $bounceRate = DB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->where('is_new_page_visit', true)
             ->count() / ($totalVisits ?: 1);
@@ -143,7 +143,7 @@ class AnalyticsDashboardController
 
     protected function getPageViewsData($startDate, $endDate)
     {
-        return DB::table('enhanced_analytics_page_views')
+        return DB::table('statamic_analytics_page_views')
             ->select(
                 DB::raw('DATE(visited_at) as date'),
                 DB::raw('COUNT(*) as total_views'),
@@ -157,7 +157,7 @@ class AnalyticsDashboardController
 
     protected function getTopPages($startDate, $endDate, $limit = 10)
     {
-        $pages = DB::table('enhanced_analytics_page_views as a')
+        $pages = DB::table('statamic_analytics_page_views as a')
             ->select(
                 'page_url',
                 DB::raw('COUNT(*) as views'),
@@ -171,7 +171,7 @@ class AnalyticsDashboardController
             ->get();
 
         foreach ($pages as $page) {
-            $sessions = DB::table('enhanced_analytics_page_views')
+            $sessions = DB::table('statamic_analytics_page_views')
                 ->select('session_id', 'visited_at')
                 ->where('page_url', $page->page_url)
                 ->whereBetween('visited_at', [$startDate, $endDate])
@@ -199,12 +199,12 @@ class AnalyticsDashboardController
             $page->avg_time = $timeCount > 0 ? $totalTime / $timeCount : 0;
 
             $totalPageViews = $page->views;
-            $exits = DB::table('enhanced_analytics_page_views as a')
+            $exits = DB::table('statamic_analytics_page_views as a')
                 ->where('page_url', $page->page_url)
                 ->whereBetween('visited_at', [$startDate, $endDate])
                 ->whereNotExists(function ($query) {
                     $query->select(DB::raw(1))
-                        ->from('enhanced_analytics_page_views as b')
+                        ->from('statamic_analytics_page_views as b')
                         ->whereRaw('a.session_id = b.session_id')
                         ->whereRaw('a.visited_at < b.visited_at');
                 })
@@ -218,7 +218,7 @@ class AnalyticsDashboardController
 
     protected function getDeviceStats($startDate, $endDate)
     {
-        return DB::table('enhanced_analytics_aggregates')
+        return DB::table('statamic_analytics_aggregates')
             ->where('dimension', 'device_type')
             ->where('type', 'daily')
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
@@ -229,7 +229,7 @@ class AnalyticsDashboardController
 
     protected function getCountryStats($startDate, $endDate)
     {
-        return DB::table('enhanced_analytics_aggregates')
+        return DB::table('statamic_analytics_aggregates')
             ->where('dimension', 'country_code')
             ->where('type', 'daily')
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
@@ -242,7 +242,7 @@ class AnalyticsDashboardController
 
     protected function getBrowserStats($startDate, $endDate)
     {
-        return DB::table('enhanced_analytics_aggregates')
+        return DB::table('statamic_analytics_aggregates')
             ->where('dimension', 'browser')
             ->where('type', 'daily')
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
@@ -254,7 +254,7 @@ class AnalyticsDashboardController
 
     protected function calculateAverageTimeOnSite($startDate, $endDate)
     {
-        $sessions = DB::table('enhanced_analytics_page_views')
+        $sessions = DB::table('statamic_analytics_page_views')
             ->select('session_id', 'visited_at')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->whereNotNull('session_id')
@@ -279,7 +279,7 @@ class AnalyticsDashboardController
 
     protected function getReferrerStats($startDate, $endDate)
     {
-        $sources = DB::table('enhanced_analytics_page_views')
+        $sources = DB::table('statamic_analytics_page_views')
             ->select(
                 DB::raw("CASE
                     WHEN referrer_url IS NULL OR referrer_url = '' THEN 'direct'
@@ -293,7 +293,7 @@ class AnalyticsDashboardController
             ->groupBy('source')
             ->get();
 
-        $topDomains = DB::table('enhanced_analytics_page_views')
+        $topDomains = DB::table('statamic_analytics_page_views')
             ->select(
                 DB::raw("SUBSTRING_INDEX(SUBSTRING_INDEX(REPLACE(REPLACE(referrer_url, 'https://', ''), 'http://', ''), '/', 1), '?', 1) as domain"),
                 DB::raw('COUNT(*) as total')
@@ -314,7 +314,7 @@ class AnalyticsDashboardController
 
     protected function getPlatformStats($startDate, $endDate)
     {
-        return DB::table('enhanced_analytics_page_views')
+        return DB::table('statamic_analytics_page_views')
             ->select('platform', DB::raw('COUNT(*) as total'))
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->whereNotNull('platform')
@@ -326,7 +326,7 @@ class AnalyticsDashboardController
 
     protected function getCityStats($startDate, $endDate)
     {
-        return DB::table('enhanced_analytics_page_views')
+        return DB::table('statamic_analytics_page_views')
             ->select('city', 'country_name', DB::raw('COUNT(*) as total'))
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->whereNotNull('city')
@@ -339,7 +339,7 @@ class AnalyticsDashboardController
 
     protected function getHeatmapData($startDate, $endDate)
     {
-        $rows = DB::table('enhanced_analytics_page_views')
+        $rows = DB::table('statamic_analytics_page_views')
             ->select(
                 DB::raw('HOUR(visited_at) as hour'),
                 DB::raw('DAYOFWEEK(visited_at) as day'),
@@ -366,7 +366,7 @@ class AnalyticsDashboardController
 
     protected function getNewVsReturningTrend($startDate, $endDate)
     {
-        return DB::table('enhanced_analytics_page_views')
+        return DB::table('statamic_analytics_page_views')
             ->select(
                 DB::raw('DATE(visited_at) as date'),
                 DB::raw('SUM(CASE WHEN is_new_visitor = 1 THEN 1 ELSE 0 END) as new_visitors'),
@@ -380,7 +380,7 @@ class AnalyticsDashboardController
 
     protected function getSessionDepth($startDate, $endDate)
     {
-        $sessions = DB::table('enhanced_analytics_page_views')
+        $sessions = DB::table('statamic_analytics_page_views')
             ->select('session_id', DB::raw('COUNT(*) as pages'))
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->whereNotNull('session_id')
@@ -417,7 +417,7 @@ class AnalyticsDashboardController
         $startDate = $this->getStartDate($request->input('range'), $request);
         $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date')) : Carbon::now();
 
-        $data = DB::table('enhanced_analytics_page_views')
+        $data = DB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->get();
 
@@ -454,13 +454,13 @@ class AnalyticsDashboardController
 
     public function getGeolocationStats()
     {
-        $stats = \Oli217\EnhancedAnalytics\Middleware\TrackPageVisit::getGeolocationStats();
+        $stats = \Oliweb\StatamicAnalytics\Middleware\TrackPageVisit::getGeolocationStats();
         return response()->json($stats);
     }
 
     public function clearGeolocationCache()
     {
-        \Oli217\EnhancedAnalytics\Middleware\TrackPageVisit::clearGeolocationCache();
+        \Oliweb\StatamicAnalytics\Middleware\TrackPageVisit::clearGeolocationCache();
         return response()->json(['message' => 'Cache cleared successfully']);
     }
 
@@ -484,23 +484,23 @@ class AnalyticsDashboardController
 
     protected function getEngagementMetrics($startDate, $endDate)
     {
-        $newVisitors = DB::table('enhanced_analytics_page_views')
+        $newVisitors = DB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->where('is_new_visitor', true)
             ->count();
 
-        $returningVisitors = DB::table('enhanced_analytics_page_views')
+        $returningVisitors = DB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->where('is_new_visitor', false)
             ->count();
 
-        $sessionCount = DB::table('enhanced_analytics_page_views')
+        $sessionCount = DB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->whereNotNull('session_id')
             ->distinct()
             ->count('session_id');
 
-        $totalPageViews = DB::table('enhanced_analytics_page_views')
+        $totalPageViews = DB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->count();
 
@@ -516,7 +516,7 @@ class AnalyticsDashboardController
 
     protected function getUserFlow($startDate, $endDate)
     {
-        $entryPages = DB::table('enhanced_analytics_page_views')
+        $entryPages = DB::table('statamic_analytics_page_views')
             ->select('page_url', DB::raw('COUNT(*) as count'))
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->where('is_new_page_visit', true)
@@ -526,7 +526,7 @@ class AnalyticsDashboardController
             ->get();
 
         $engagedPages = collect();
-        $pages = DB::table('enhanced_analytics_page_views')
+        $pages = DB::table('statamic_analytics_page_views')
             ->select('page_url', 'session_id', 'visited_at')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->whereNotNull('session_id')
@@ -564,7 +564,7 @@ class AnalyticsDashboardController
         $engagedPages = $engagedPages->sortByDesc('avg_time')->take(5)->values();
 
         $exitPages = collect();
-        $pages = DB::table('enhanced_analytics_page_views')
+        $pages = DB::table('statamic_analytics_page_views')
             ->select('page_url', 'session_id', 'visited_at')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->get()

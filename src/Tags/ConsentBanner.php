@@ -1,6 +1,6 @@
 <?php
 
-namespace Oli217\EnhancedAnalytics\Tags;
+namespace Oliweb\StatamicAnalytics\Tags;
 
 // use Illuminate\Foundation\Vite;
 use Illuminate\Support\Facades\Log;
@@ -9,10 +9,10 @@ use Statamic\Tags\Tags;
 
 class ConsentBanner extends Tags
 {
-    protected static $handle = 'enhanced_analytics';
+    protected static $handle = 'statamic_analytics';
 
     /**
-     * The {{ enhanced_analytics:consent_banner }} tag
+     * The {{ statamic_analytics:consent_banner }} tag
      */
     public function consent_banner()
     {
@@ -20,7 +20,7 @@ class ConsentBanner extends Tags
     }
 
     /**
-     * The {{ enhanced_analytics }} tag
+     * The {{ statamic_analytics }} tag
      */
     public function index()
     {
@@ -37,10 +37,10 @@ class ConsentBanner extends Tags
             // Get the context data
             $context = array_merge($this->context->all(), [
                 'config' => [
-                    'enhanced-analytics' => [
+                    'statamic-analytics' => [
                         'tracking' => [
                             'consent' => [
-                                'banner' => config('enhanced-analytics.tracking.consent.banner')
+                                'banner' => config('statamic-analytics.tracking.consent.banner')
                             ]
                         ]
                     ]
@@ -60,7 +60,7 @@ class ConsentBanner extends Tags
 
     protected function getTemplatePath()
     {
-        $exportedComponentPath = resource_path('views/vendor/enhanced-analytics/components/consent-banner.antlers.html');
+        $exportedComponentPath = resource_path('views/vendor/statamic-analytics/components/consent-banner.antlers.html');
         if (file_exists($exportedComponentPath)) {
             return $exportedComponentPath;
         } else {
@@ -84,9 +84,9 @@ class ConsentBanner extends Tags
      */
     public function AddonAssets()
     {
-//        $vite = (new Vite)->useHotfile( __DIR__ . '/../../resources/dist/hot')->useBuildDirectory('vendor/enhanced-analytics/dist');
+//        $vite = (new Vite)->useHotfile( __DIR__ . '/../../resources/dist/hot')->useBuildDirectory('vendor/statamic-analytics/dist');
 //        //$assets = sprintf('<script data-cfasync=“false” type="module" src="%s"></script>', $vite->asset('resources/js/consent-banner.js'));
-//        $assets = sprintf('<link rel="stylesheet" href="%s" />', $vite->asset('resources/css/enhanced-analytics.css'));
+//        $assets = sprintf('<link rel="stylesheet" href="%s" />', $vite->asset('resources/css/statamic-analytics.css'));
 //        return $assets;
     }
 }
