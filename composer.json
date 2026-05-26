@@ -1,5 +1,5 @@
 {
-    "name": "oliweb/statamic-analytics",
+    "name": "oliweb/statamic-privacy-analytics",
     "description": "A powerful, efficient analytics solution for Statamic with real-time tracking, caching, and comprehensive dashboard visualization.",
     "type": "statamic-addon",
     "keywords": [
@@ -29,7 +29,7 @@
     },
     "extra": {
         "statamic": {
-            "name": "Statamic Analytics",
+            "name": "Privacy Analytics",
             "description": "A powerful, efficient analytics solution for Statamic with real-time tracking and comprehensive dashboard"
         },
         "laravel": {
