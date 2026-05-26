@@ -121,6 +121,9 @@
             </div>
         </div>
 
+        <!-- Realtime widget -->
+        <RealTimeWidget :totals="realtime.totals" :breakdowns="realtime.breakdowns" :t="t" />
+
         <!-- Visitor Engagement Metrics -->
         <div class="ea-grid ea-grid-cols-2">
             <div class="ea-card">
@@ -151,6 +154,9 @@
                 </div>
             </div>
         </div>
+
+        <!-- New vs Returning trend -->
+        <NewReturningTrendWidget :data="newVsReturning" :t="t" />
 
         <!-- Geographic & Technical Insights -->
         <div class="ea-grid ea-grid-cols-1">
@@ -191,6 +197,21 @@
                 </div>
             </div>
         </div>
+
+        <!-- Cities -->
+        <CityWidget :data="cityStats" :t="t" />
+
+        <!-- Referrer sources -->
+        <ReferrerWidget :data="referrerStats" :t="t" />
+
+        <!-- Platforms -->
+        <PlatformWidget :data="platformStats" :t="t" />
+
+        <!-- Heatmap -->
+        <HeatmapWidget :data="heatmapData" :t="t" />
+
+        <!-- Session depth -->
+        <SessionDepthWidget :data="sessionDepth" :t="t" />
 
         <!-- Page Performance -->
         <div class="ea-card">
@@ -261,6 +282,13 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { Chart } from 'chart.js/auto'
+import RealTimeWidget from './widgets/RealTimeWidget.vue'
+import NewReturningTrendWidget from './widgets/NewReturningTrendWidget.vue'
+import CityWidget from './widgets/CityWidget.vue'
+import ReferrerWidget from './widgets/ReferrerWidget.vue'
+import PlatformWidget from './widgets/PlatformWidget.vue'
+import HeatmapWidget from './widgets/HeatmapWidget.vue'
+import SessionDepthWidget from './widgets/SessionDepthWidget.vue'
 
 const props = defineProps({
     config: {
@@ -313,9 +341,20 @@ const geoStats = reactive({
     last_lookup:        null,
 })
 
-const countryStats = ref([])
-const topPages     = ref([])
-const userFlow     = reactive({ entry_pages: [], engaged_pages: [], exit_pages: [] })
+const realtime = reactive({
+    totals:     {},
+    breakdowns: {},
+})
+
+const countryStats    = ref([])
+const topPages        = ref([])
+const userFlow        = reactive({ entry_pages: [], engaged_pages: [], exit_pages: [] })
+const referrerStats   = ref(null)
+const platformStats   = ref([])
+const cityStats       = ref([])
+const heatmapData     = ref([])
+const newVsReturning  = ref([])
+const sessionDepth    = ref([])
 
 // Chart canvas refs
 const pageViewsChartEl = ref(null)
@@ -329,8 +368,9 @@ let deviceChart    = null
 let countryChart   = null
 let browserChart   = null
 
-// Auto-refresh timer
-let refreshTimer = null
+// Timers
+let refreshTimer  = null
+let realtimeTimer = null
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 
@@ -449,6 +489,18 @@ async function fetchData() {
     }
 }
 
+async function fetchRealtime() {
+    try {
+        const response = await fetch(props.config.routes.realtime)
+        if (!response.ok) throw new Error('Failed to fetch realtime data')
+        const data = await response.json()
+        realtime.totals     = data.totals     ?? {}
+        realtime.breakdowns = data.breakdowns ?? {}
+    } catch (error) {
+        console.error('Error fetching realtime data:', error)
+    }
+}
+
 function updateState(data) {
     if (data.overview) {
         overview.totalVisits    = data.overview.total_visits
@@ -467,8 +519,14 @@ function updateState(data) {
         engagement.avgSessionDuration = data.engagement.avg_session_duration
     }
 
-    if (data.top_pages)    topPages.value = data.top_pages
-    if (data.country_stats) countryStats.value = data.country_stats
+    if (data.top_pages)        topPages.value       = data.top_pages
+    if (data.country_stats)    countryStats.value   = data.country_stats
+    if (data.referrer_stats)   referrerStats.value  = data.referrer_stats
+    if (data.platform_stats)   platformStats.value  = data.platform_stats
+    if (data.city_stats)       cityStats.value      = data.city_stats
+    if (data.heatmap_data)     heatmapData.value    = data.heatmap_data
+    if (data.new_vs_returning) newVsReturning.value = data.new_vs_returning
+    if (data.session_depth)    sessionDepth.value   = data.session_depth
 
     if (data.user_flow) {
         userFlow.entry_pages   = data.user_flow.entry_pages   ?? []
@@ -477,9 +535,9 @@ function updateState(data) {
     }
 
     if (data.page_views) {
-        pageViewsChart.data.labels                = data.page_views.map(i => i.date)
-        pageViewsChart.data.datasets[0].data      = data.page_views.map(i => i.total_views)
-        pageViewsChart.data.datasets[1].data      = data.page_views.map(i => i.unique_views)
+        pageViewsChart.data.labels           = data.page_views.map(i => i.date)
+        pageViewsChart.data.datasets[0].data = data.page_views.map(i => i.total_views)
+        pageViewsChart.data.datasets[1].data = data.page_views.map(i => i.unique_views)
         pageViewsChart.update()
     }
     if (data.device_stats) {
@@ -550,11 +608,14 @@ function exportData() {
 onMounted(() => {
     initCharts()
     fetchData()
-    refreshTimer = setInterval(fetchData, props.config.refreshInterval * 1000)
+    fetchRealtime()
+    refreshTimer  = setInterval(fetchData,     props.config.refreshInterval * 1000)
+    realtimeTimer = setInterval(fetchRealtime, 30000)
 })
 
 onUnmounted(() => {
-    if (refreshTimer) clearInterval(refreshTimer)
+    if (refreshTimer)  clearInterval(refreshTimer)
+    if (realtimeTimer) clearInterval(realtimeTimer)
     pageViewsChart?.destroy()
     deviceChart?.destroy()
     countryChart?.destroy()

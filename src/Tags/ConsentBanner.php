@@ -1,6 +1,6 @@
 <?php
 
-namespace Mohammedshuaau\EnhancedAnalytics\Tags;
+namespace Oli217\EnhancedAnalytics\Tags;
 
 // use Illuminate\Foundation\Vite;
 use Illuminate\Support\Facades\Log;

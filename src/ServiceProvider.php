@@ -1,6 +1,6 @@
 <?php
 
-namespace Mohammedshuaau\EnhancedAnalytics;
+namespace Oli217\EnhancedAnalytics;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\File;

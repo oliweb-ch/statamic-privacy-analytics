@@ -1,11 +1,11 @@
 <?php
 
-namespace Mohammedshuaau\EnhancedAnalytics\Middleware;
+namespace Oli217\EnhancedAnalytics\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Jenssegers\Agent\Agent;
@@ -56,17 +56,14 @@ class TrackPageVisit
                     $data = json_decode($response, true);
 
                     if ($data && isset($data['status']) && $data['status'] === 'success') {
-                        // Store successful lookup in analytics
                         $this->trackGeolocationLookup($ipAddress, true);
-                        $geoData = [
+                        return [
                             'country_code' => $data['countryCode'] ?? null,
                             'country_name' => $data['country'] ?? null,
                             'city' => $data['city'] ?? null
                         ];
-                        return $geoData;
                     }
 
-                    // Store failed lookup in analytics
                     Log::warning('Enhanced Analytics: IP-API lookup failed', [
                         'status' => $data['status'] ?? 'unknown',
                         'message' => $data['message'] ?? 'No message'
@@ -76,7 +73,6 @@ class TrackPageVisit
                 } catch (\Exception $e) {
                     Log::error('Enhanced Analytics: Geolocation API error', [
                         'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
                     ]);
                     $this->trackGeolocationLookup($ipAddress, false);
                     return $this->getFallbackGeolocationData($ipAddress);
@@ -85,7 +81,6 @@ class TrackPageVisit
         } catch (\Exception $e) {
             Log::error('Enhanced Analytics: Geolocation error', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             return $this->getFallbackGeolocationData($ipAddress);
         }
@@ -93,7 +88,6 @@ class TrackPageVisit
 
     protected function getFallbackGeolocationData($ipAddress)
     {
-        // Try to get from historical data
         $historicalKey = 'enhanced_analytics_historical_geo';
         $historicalData = Cache::get($historicalKey, []);
 
@@ -162,7 +156,6 @@ class TrackPageVisit
     {
         try {
             if ($this->shouldTrack($request)) {
-                // Get current timestamp
                 $now = now();
 
                 // Store consent value before session regeneration
@@ -171,12 +164,10 @@ class TrackPageVisit
 
                 // Force session regeneration for fresh tracking
                 if (!$request->session()->has('analytics_session_started')) {
-
                     $request->session()->invalidate();
                     $request->session()->regenerate();
                     $request->session()->put('analytics_session_started', true);
 
-                    // Restore consent value after session regeneration
                     if (!is_null($consentValue)) {
                         $request->session()->put('analytics_consent', $consentValue);
                         $request->session()->put('analytics_settings', $consentSettings);
@@ -197,51 +188,48 @@ class TrackPageVisit
                 $pageUrl = $request->path();
                 $ipAddress = $request->ip();
 
-                // Get geographic data
+                // Get geographic data (cached via Cache facade)
                 $geoData = $this->getGeolocationData($ipAddress);
 
-                // Get visited pages from session
+                // Track page uniqueness per session
                 $visitedPages = $request->session()->get('visited_pages', []);
                 $isNewPageVisit = !in_array($pageUrl, $visitedPages);
 
-                // Update visited pages before creating visit data
                 if ($isNewPageVisit) {
                     $visitedPages[] = $pageUrl;
                     $request->session()->put('visited_pages', array_unique($visitedPages));
                 }
 
-                // Get last visit timestamps
                 $lastVisitDate = $request->session()->get('last_visit_date');
                 $lastVisitHour = $request->session()->get('last_visit_hour');
 
-                $visitData = [
-                    'page_url' => $pageUrl,
-                    'ip_address' => $ipAddress,
-                    'user_agent' => $request->userAgent(),
-                    'country_code' => $geoData['country_code'],
-                    'country_name' => $geoData['country_name'],
-                    'city' => $geoData['city'],
-                    'device_type' => $this->getDeviceType(),
-                    'browser' => $this->agent->browser(),
-                    'platform' => $this->agent->platform(),
-                    'referrer_url' => $request->header('referer'),
-                    'user_id' => auth()->id(),
-                    'session_id' => $request->session()->getId(),
-                    'visitor_id' => $visitorId,
-                    'is_new_visitor' => $isNewVisitor,
-                    'is_new_day_visit' => !$lastVisitDate,
+                // Write directly to DB
+                DB::table('enhanced_analytics_page_views')->insert([
+                    'page_url'          => $pageUrl,
+                    'ip_address'        => $ipAddress,
+                    'user_agent'        => $request->userAgent(),
+                    'country_code'      => $geoData['country_code'],
+                    'country_name'      => $geoData['country_name'],
+                    'city'              => $geoData['city'],
+                    'device_type'       => $this->getDeviceType(),
+                    'browser'           => $this->agent->browser(),
+                    'platform'          => $this->agent->platform(),
+                    'referrer_url'      => $request->header('referer'),
+                    'user_id'           => auth()->id(),
+                    'session_id'        => $request->session()->getId(),
+                    'visitor_id'        => $visitorId,
+                    'is_new_visitor'    => $isNewVisitor,
+                    'is_new_day_visit'  => !$lastVisitDate,
                     'is_new_hour_visit' => !$lastVisitHour,
                     'is_new_page_visit' => $isNewPageVisit,
-                    'visited_at' => $now->format('Y-m-d H:i:s'),
-                ];
+                    'visited_at'        => $now->format('Y-m-d H:i:s'),
+                    'created_at'        => $now,
+                    'updated_at'        => $now,
+                ]);
 
-                // Update session data
+                // Update session timestamps
                 $request->session()->put('last_visit_date', $now);
                 $request->session()->put('last_visit_hour', $now);
-
-                $this->storeVisit($visitData);
-            } else {
-
             }
         } catch (\Exception $e) {
             Log::error('Enhanced Analytics: Error in middleware', [
@@ -259,44 +247,36 @@ class TrackPageVisit
         if (config('enhanced-analytics.tracking.consent.enabled', true)) {
             $consent = session('analytics_consent');
 
-            // If consent is required but no action taken (null), don't track
             if (is_null($consent)) {
                 return false;
             }
-            // If user explicitly declined (false), don't track
             if ($consent === false) {
                 return false;
             }
-            // At this point, consent must be true to continue
             if ($consent !== true) {
                 return false;
             }
         }
 
-        // Get excluded paths and IPs from config
         $excludedPaths = config('enhanced-analytics.tracking.exclude_paths', []);
         $excludedIps = config('enhanced-analytics.tracking.exclude_ips', []);
         $excludeBots = config('enhanced-analytics.tracking.exclude_bots', true);
         $trackAuthenticated = config('enhanced-analytics.tracking.track_authenticated_users', true);
 
-        // Check if the path should be excluded
         foreach ($excludedPaths as $path) {
             if (Str::is($path, $request->path())) {
                 return false;
             }
         }
 
-        // Check if the IP should be excluded
         if (in_array($request->ip(), $excludedIps)) {
             return false;
         }
 
-        // Check if it's a bot and should be excluded
         if ($excludeBots && $this->agent->isRobot()) {
             return false;
         }
 
-        // Check if authenticated users should be tracked
         if (!$trackAuthenticated && auth()->check()) {
             return false;
         }
@@ -315,75 +295,5 @@ class TrackPageVisit
         }
 
         return 'desktop';
-    }
-
-    protected function storeVisit(array $visitData)
-    {
-        try {
-            $key = 'analytics_' . now()->format('Y_m_d_H_i');
-            $path = $this->getCachePath($key);
-
-            // Ensure directory exists
-            $directory = dirname($path);
-            if (!File::exists($directory)) {
-                File::makeDirectory($directory, 0755, true);
-            }
-
-            // Get existing data or create new array
-            $data = [];
-            if (File::exists($path)) {
-                $content = File::get($path);
-                $data = json_decode($content, true);
-                if (!is_array($data)) {
-                    Log::warning('Enhanced Analytics: Invalid JSON data in file', [
-                        'path' => $path,
-                        'content' => $content
-                    ]);
-                    $data = [];
-                }
-            }
-
-            // Append new visit
-            $data[] = $visitData;
-
-            // Store updated data
-            $jsonData = json_encode($data);
-            if ($jsonData === false) {
-                Log::error('Enhanced Analytics: JSON encode error', [
-                    'error' => json_last_error_msg(),
-                    'data' => $data
-                ]);
-                return;
-            }
-
-            File::put($path, $jsonData);
-
-            // Update cache index
-            $this->updateCacheIndex($key);
-        } catch (\Exception $e) {
-            Log::error('Enhanced Analytics: Error storing visit', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
-    }
-
-    protected function getCachePath($key): string
-    {
-        $basePath = config('enhanced-analytics.cache.file.path');
-        return $basePath . '/' . $key . '.json';
-    }
-
-    protected function updateCacheIndex($newKey)
-    {
-        $indexPath = $this->getCachePath('index');
-        $keys = [];
-
-        if (File::exists($indexPath)) {
-            $keys = json_decode(File::get($indexPath), true) ?? [];
-        }
-
-        $keys[] = $newKey;
-        File::put($indexPath, json_encode(array_unique($keys)));
     }
 }

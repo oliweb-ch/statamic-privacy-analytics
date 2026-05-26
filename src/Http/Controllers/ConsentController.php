@@ -1,6 +1,6 @@
 <?php
 
-namespace Mohammedshuaau\EnhancedAnalytics\Http\Controllers;
+namespace Oli217\EnhancedAnalytics\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;

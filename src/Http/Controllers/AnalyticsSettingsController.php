@@ -1,10 +1,10 @@
 <?php
 
-namespace Mohammedshuaau\EnhancedAnalytics\Http\Controllers;
+namespace Oli217\EnhancedAnalytics\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Mohammedshuaau\EnhancedAnalytics\Middleware\TrackPageVisit;
+use Oli217\EnhancedAnalytics\Middleware\TrackPageVisit;
 
 class AnalyticsSettingsController
 {

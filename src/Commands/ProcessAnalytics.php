@@ -1,34 +1,23 @@
 <?php
 
-namespace Mohammedshuaau\EnhancedAnalytics\Commands;
+namespace Oli217\EnhancedAnalytics\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
-use Carbon\Carbon;
-use Mohammedshuaau\EnhancedAnalytics\Cache\CacheManager;
-use Illuminate\Cache\Lock;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class ProcessAnalytics extends Command
 {
     protected $signature = 'analytics:process';
-    protected $description = 'Process cached analytics data and store it in the database';
-
-    protected $cache;
-
-    public function __construct(CacheManager $cache)
-    {
-        parent::__construct();
-        $this->cache = $cache;
-    }
+    protected $description = 'Recalculate analytics aggregates from page_views for the last 2 days';
 
     public function handle()
     {
-        $this->info('Processing analytics data...');
+        $this->info('Processing analytics aggregates...');
 
-        // Acquire a lock to prevent multiple processes from running simultaneously
-        $lock = Cache::lock('enhanced-analytics:processing', config('enhanced-analytics.processing.lock_timeout'));
+        $lock = Cache::lock('enhanced-analytics:processing', config('enhanced-analytics.processing.lock_timeout', 60));
 
         try {
             if (!$lock->get()) {
@@ -36,187 +25,71 @@ class ProcessAnalytics extends Command
                 return;
             }
 
-            $keys = $this->cache->getAllKeys();
+            $dates = [
+                Carbon::today()->toDateString(),
+                Carbon::yesterday()->toDateString(),
+            ];
 
-            if (empty($keys)) {
-                $this->info('No analytics data to process.');
-                return;
+            foreach ($dates as $date) {
+                DB::transaction(function () use ($date) {
+                    $this->rebuildAggregatesForDate($date);
+                });
             }
 
-            $processedCount = 0;
-            $chunkSize = config('enhanced-analytics.processing.chunk_size', 1000);
-            $errors = [];
-
-            foreach ($keys as $key) {
-                try {
-                    $visits = $this->cache->get($key);
-
-                    if (empty($visits)) {
-                        $this->cache->delete($key);
-                        continue;
-                    }
-
-                    // Process in chunks to avoid memory issues
-                    foreach (array_chunk($visits, $chunkSize) as $chunk) {
-                        DB::transaction(function () use ($chunk) {
-                            $this->processVisits($chunk);
-                        });
-
-                        $processedCount += count($chunk);
-                    }
-
-                    // Delete processed data
-                    $this->cache->delete($key);
-                } catch (\Exception $e) {
-                    $errors[] = "Failed to process key {$key}: {$e->getMessage()}";
-                    report($e);
-                }
-            }
-
-            // Clean up any old data
-            $this->cache->cleanup();
-
-            $this->info("Processed {$processedCount} analytics records.");
-
-            if (!empty($errors)) {
-                $this->error('Some errors occurred during processing:');
-                foreach ($errors as $error) {
-                    $this->error("- {$error}");
-                }
-            }
+            $this->info('Aggregates updated for: ' . implode(', ', $dates));
         } catch (\Exception $e) {
             $this->error("Fatal error during processing: {$e->getMessage()}");
-            report($e);
+            Log::error('Enhanced Analytics: ProcessAnalytics error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
         } finally {
-            // Always release the lock
             $lock->release();
         }
     }
 
-    protected function processVisits(array $visits)
+    protected function rebuildAggregatesForDate(string $date): void
     {
-        try {
+        $dimensions = ['country_code', 'device_type', 'browser', 'platform'];
+
+        foreach ($dimensions as $dimension) {
+            // Delete existing aggregates for this date/dimension
+            DB::table('enhanced_analytics_aggregates')
+                ->where('type', 'daily')
+                ->where('date', $date)
+                ->where('dimension', $dimension)
+                ->delete();
+
+            // Re-insert from page_views
+            $rows = DB::table('enhanced_analytics_page_views')
+                ->select(
+                    DB::raw("'{$dimension}' as dimension"),
+                    DB::raw("{$dimension} as dimension_value"),
+                    DB::raw('COUNT(*) as total_visits'),
+                    DB::raw('SUM(CASE WHEN is_new_visitor = 1 THEN 1 ELSE 0 END) as unique_visitors'),
+                    DB::raw('SUM(CASE WHEN is_new_page_visit = 1 THEN 1 ELSE 0 END) as unique_page_views'),
+                    DB::raw('SUM(CASE WHEN is_new_visitor = 0 THEN 1 ELSE 0 END) as returning_visitors')
+                )
+                ->whereDate('visited_at', $date)
+                ->whereNotNull($dimension)
+                ->where($dimension, '!=', '')
+                ->groupBy($dimension)
+                ->get();
+
             $now = Carbon::now();
-
-            // Prepare bulk insert data
-            $records = array_map(function ($visit) use ($now) {
-                if (!is_array($visit)) {
-                    Log::error('Enhanced Analytics: Invalid visit data', [
-                        'visit' => $visit,
-                        'type' => gettype($visit)
-                    ]);
-                    return null;
-                }
-
-                // Ensure user_id is either null or a numeric value
-                $userId = isset($visit['user_id']) && is_numeric($visit['user_id']) ? $visit['user_id'] : null;
-
-                // Format the visited_at datetime
-                $visitedAt = isset($visit['visited_at']) ? Carbon::parse($visit['visited_at'])->format('Y-m-d H:i:s') : $now->format('Y-m-d H:i:s');
-
-                return array_merge($visit, [
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                    'user_id' => $userId,
-                    'visited_at' => $visitedAt
-                ]);
-            }, $visits);
-
-            // Filter out any null records
-            $records = array_filter($records);
-
-            if (empty($records)) {
-                Log::warning('Enhanced Analytics: No valid records to process');
-                return;
-            }
-
-            // Bulk insert
-            DB::table('enhanced_analytics_page_views')->insert($records);
-
-            // Update aggregates
-            $this->updateAggregates($visits);
-        } catch (\Exception $e) {
-            Log::error('Enhanced Analytics: Error processing visits', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            throw $e;
-        }
-    }
-
-    protected function updateAggregates(array $visits)
-    {
-        $dimensions = [
-            'country_code',
-            'device_type',
-            'browser',
-            'platform'
-        ];
-
-        foreach ($visits as $visit) {
-            if (!is_array($visit)) {
-                Log::warning('Enhanced Analytics: Invalid visit data in aggregates', [
-                    'visit' => $visit,
-                    'type' => gettype($visit)
-                ]);
-                continue;
-            }
-
-            $date = Carbon::parse($visit['visited_at'])->toDateString();
-
-            foreach ($dimensions as $dimension) {
-                if (!isset($visit[$dimension]) || empty($visit[$dimension])) {
-                    continue;
-                }
-
-                $value = $visit[$dimension];
-
-                $this->updateAggregate('daily', $date, $dimension, $value, $visit);
-            }
-        }
-    }
-
-    protected function updateAggregate($type, $date, $dimension, $value, array $visit)
-    {
-        try {
-            $record = DB::table('enhanced_analytics_aggregates')
-                ->where([
-                    'type' => $type,
-                    'date' => $date,
-                    'dimension' => $dimension,
-                    'dimension_value' => $value,
-                ])
-                ->first();
-
-            if ($record) {
-                DB::table('enhanced_analytics_aggregates')
-                    ->where('id', $record->id)
-                    ->update([
-                        'total_visits' => $record->total_visits + 1,
-                        'unique_visitors' => $record->unique_visitors + ($visit['is_new_visitor'] ? 1 : 0),
-                        'unique_page_views' => $record->unique_page_views + ($visit['is_new_page_visit'] ? 1 : 0),
-                        'returning_visitors' => $record->returning_visitors + (!$visit['is_new_visitor'] ? 1 : 0),
-                        'updated_at' => Carbon::now(),
-                    ]);
-            } else {
+            foreach ($rows as $row) {
                 DB::table('enhanced_analytics_aggregates')->insert([
-                    'type' => $type,
-                    'date' => $date,
-                    'dimension' => $dimension,
-                    'dimension_value' => $value,
-                    'total_visits' => 1,
-                    'unique_visitors' => $visit['is_new_visitor'] ? 1 : 0,
-                    'unique_page_views' => $visit['is_new_page_visit'] ? 1 : 0,
-                    'returning_visitors' => !$visit['is_new_visitor'] ? 1 : 0,
-                    'updated_at' => Carbon::now(),
+                    'type'              => 'daily',
+                    'date'              => $date,
+                    'dimension'         => $dimension,
+                    'dimension_value'   => $row->dimension_value,
+                    'total_visits'      => $row->total_visits,
+                    'unique_visitors'   => $row->unique_visitors,
+                    'unique_page_views' => $row->unique_page_views,
+                    'returning_visitors'=> $row->returning_visitors,
+                    'updated_at'        => $now,
                 ]);
             }
-        } catch (\Exception $e) {
-            Log::error('Enhanced Analytics: Error updating aggregate', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            throw $e;
         }
     }
 }

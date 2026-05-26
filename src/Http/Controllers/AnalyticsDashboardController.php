@@ -1,6 +1,6 @@
 <?php
 
-namespace Mohammedshuaau\EnhancedAnalytics\Http\Controllers;
+namespace Oli217\EnhancedAnalytics\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +24,7 @@ class AnalyticsDashboardController
                     'export'     => cp_route('enhanced-analytics.export'),
                     'clearCache' => cp_route('enhanced-analytics.clear-cache'),
                     'geoStats'   => cp_route('enhanced-analytics.geo-stats'),
+                    'realtime'   => cp_route('enhanced-analytics.realtime'),
                 ],
             ],
             'translations' => trans('enhanced-analytics::messages'),
@@ -43,7 +44,6 @@ class AnalyticsDashboardController
             }
         }
 
-        // Get previous period for comparisons
         $periodLength = $startDate->diffInDays($endDate);
         $previousStartDate = $startDate->copy()->subDays($periodLength);
         $previousEndDate = $startDate->copy()->subDay();
@@ -53,23 +53,54 @@ class AnalyticsDashboardController
                 $this->getOverviewStats($startDate, $endDate),
                 ['comparisons' => $this->getComparisons($startDate, $endDate, $previousStartDate, $previousEndDate)]
             ),
-            'engagement' => $this->getEngagementMetrics($startDate, $endDate),
-            'page_views' => $this->getPageViewsData($startDate, $endDate),
-            'device_stats' => $this->getDeviceStats($startDate, $endDate),
-            'country_stats' => $this->getCountryStats($startDate, $endDate),
-            'browser_stats' => $this->getBrowserStats($startDate, $endDate),
-            'top_pages' => $this->getTopPages($startDate, $endDate),
-            'user_flow' => $this->getUserFlow($startDate, $endDate)
+            'engagement'       => $this->getEngagementMetrics($startDate, $endDate),
+            'page_views'       => $this->getPageViewsData($startDate, $endDate),
+            'device_stats'     => $this->getDeviceStats($startDate, $endDate),
+            'country_stats'    => $this->getCountryStats($startDate, $endDate),
+            'browser_stats'    => $this->getBrowserStats($startDate, $endDate),
+            'top_pages'        => $this->getTopPages($startDate, $endDate),
+            'user_flow'        => $this->getUserFlow($startDate, $endDate),
+            'referrer_stats'   => $this->getReferrerStats($startDate, $endDate),
+            'platform_stats'   => $this->getPlatformStats($startDate, $endDate),
+            'city_stats'       => $this->getCityStats($startDate, $endDate),
+            'heatmap_data'     => $this->getHeatmapData($startDate, $endDate),
+            'new_vs_returning' => $this->getNewVsReturningTrend($startDate, $endDate),
+            'session_depth'    => $this->getSessionDepth($startDate, $endDate),
         ];
 
-        Log::info('Analytics Data:', [
-            'range' => $range,
-            'startDate' => $startDate->toDateTimeString(),
-            'endDate' => $endDate->toDateTimeString(),
-            'data' => $data
-        ]);
-
         return response()->json($data);
+    }
+
+    public function getRealTimeVisitors()
+    {
+        $threshold = Carbon::now()->subMinutes(30);
+
+        $totals = DB::table('enhanced_analytics_page_views')
+            ->where('visited_at', '>=', $threshold)
+            ->select(
+                DB::raw('COUNT(DISTINCT session_id) as active_sessions'),
+                DB::raw('COUNT(DISTINCT visitor_id) as active_visitors'),
+                DB::raw('COUNT(*) as page_views')
+            )
+            ->first();
+
+        $breakdowns = [];
+        foreach ([5, 15, 30] as $minutes) {
+            $since = Carbon::now()->subMinutes($minutes);
+            $breakdowns["last_{$minutes}min"] = DB::table('enhanced_analytics_page_views')
+                ->where('visited_at', '>=', $since)
+                ->select(
+                    DB::raw('COUNT(DISTINCT session_id) as active_sessions'),
+                    DB::raw('COUNT(DISTINCT visitor_id) as active_visitors'),
+                    DB::raw('COUNT(*) as page_views')
+                )
+                ->first();
+        }
+
+        return response()->json([
+            'totals'     => $totals,
+            'breakdowns' => $breakdowns,
+        ]);
     }
 
     protected function getStartDate($range, Request $request)
@@ -80,9 +111,9 @@ class AnalyticsDashboardController
 
         return match($range) {
             '24hours' => Carbon::now()->subDay(),
-            '7days' => Carbon::now()->subDays(7),
-            '30days' => Carbon::now()->subDays(30),
-            default => Carbon::now()->subDays(7),
+            '7days'   => Carbon::now()->subDays(7),
+            '30days'  => Carbon::now()->subDays(30),
+            default   => Carbon::now()->subDays(7),
         };
     }
 
@@ -103,16 +134,16 @@ class AnalyticsDashboardController
             ->count() / ($totalVisits ?: 1);
 
         return [
-            'total_visits' => $totalVisits,
+            'total_visits'    => $totalVisits,
             'unique_visitors' => $uniqueVisitors,
-            'avg_time_on_site' => $this->calculateAverageTimeOnSite($startDate, $endDate),
-            'bounce_rate' => $bounceRate,
+            'avg_time_on_site'=> $this->calculateAverageTimeOnSite($startDate, $endDate),
+            'bounce_rate'     => $bounceRate,
         ];
     }
 
     protected function getPageViewsData($startDate, $endDate)
     {
-        $data = DB::table('enhanced_analytics_page_views')
+        return DB::table('enhanced_analytics_page_views')
             ->select(
                 DB::raw('DATE(visited_at) as date'),
                 DB::raw('COUNT(*) as total_views'),
@@ -122,13 +153,10 @@ class AnalyticsDashboardController
             ->groupBy('date')
             ->orderBy('date')
             ->get();
-
-        return $data;
     }
 
     protected function getTopPages($startDate, $endDate, $limit = 10)
     {
-        // Get total views and unique views per page
         $pages = DB::table('enhanced_analytics_page_views as a')
             ->select(
                 'page_url',
@@ -142,9 +170,7 @@ class AnalyticsDashboardController
             ->limit($limit)
             ->get();
 
-        // Calculate average time and exit rate for each page
         foreach ($pages as $page) {
-            // Calculate average time on page
             $sessions = DB::table('enhanced_analytics_page_views')
                 ->select('session_id', 'visited_at')
                 ->where('page_url', $page->page_url)
@@ -163,7 +189,7 @@ class AnalyticsDashboardController
                     $currentVisit = Carbon::parse($visits[$i]->visited_at);
                     $nextVisit = Carbon::parse($visits[$i + 1]->visited_at);
                     $timeDiff = $nextVisit->diffInSeconds($currentVisit);
-                    if ($timeDiff < 3600) { // Ignore differences more than an hour
+                    if ($timeDiff < 3600) {
                         $totalTime += $timeDiff;
                         $timeCount++;
                     }
@@ -172,7 +198,6 @@ class AnalyticsDashboardController
 
             $page->avg_time = $timeCount > 0 ? $totalTime / $timeCount : 0;
 
-            // Calculate exit rate
             $totalPageViews = $page->views;
             $exits = DB::table('enhanced_analytics_page_views as a')
                 ->where('page_url', $page->page_url)
@@ -252,6 +277,141 @@ class AnalyticsDashboardController
         return $sessionCount > 0 ? round($totalTime / $sessionCount) : 0;
     }
 
+    protected function getReferrerStats($startDate, $endDate)
+    {
+        $sources = DB::table('enhanced_analytics_page_views')
+            ->select(
+                DB::raw("CASE
+                    WHEN referrer_url IS NULL OR referrer_url = '' THEN 'direct'
+                    WHEN referrer_url REGEXP 'google\\\\.|bing\\\\.|duckduckgo\\\\.|yahoo\\\\.|baidu\\\\.' THEN 'search'
+                    WHEN referrer_url REGEXP 'facebook\\\\.|twitter\\\\.|linkedin\\\\.|instagram\\\\.|youtube\\\\.' THEN 'social'
+                    ELSE 'referral'
+                END as source"),
+                DB::raw('COUNT(*) as total')
+            )
+            ->whereBetween('visited_at', [$startDate, $endDate])
+            ->groupBy('source')
+            ->get();
+
+        $topDomains = DB::table('enhanced_analytics_page_views')
+            ->select(
+                DB::raw("SUBSTRING_INDEX(SUBSTRING_INDEX(REPLACE(REPLACE(referrer_url, 'https://', ''), 'http://', ''), '/', 1), '?', 1) as domain"),
+                DB::raw('COUNT(*) as total')
+            )
+            ->whereBetween('visited_at', [$startDate, $endDate])
+            ->whereNotNull('referrer_url')
+            ->where('referrer_url', '!=', '')
+            ->groupBy('domain')
+            ->orderByDesc('total')
+            ->limit(10)
+            ->get();
+
+        return [
+            'sources'     => $sources,
+            'top_domains' => $topDomains,
+        ];
+    }
+
+    protected function getPlatformStats($startDate, $endDate)
+    {
+        return DB::table('enhanced_analytics_page_views')
+            ->select('platform', DB::raw('COUNT(*) as total'))
+            ->whereBetween('visited_at', [$startDate, $endDate])
+            ->whereNotNull('platform')
+            ->where('platform', '!=', '')
+            ->groupBy('platform')
+            ->orderByDesc('total')
+            ->get();
+    }
+
+    protected function getCityStats($startDate, $endDate)
+    {
+        return DB::table('enhanced_analytics_page_views')
+            ->select('city', 'country_name', DB::raw('COUNT(*) as total'))
+            ->whereBetween('visited_at', [$startDate, $endDate])
+            ->whereNotNull('city')
+            ->where('city', '!=', '')
+            ->groupBy('city', 'country_name')
+            ->orderByDesc('total')
+            ->limit(10)
+            ->get();
+    }
+
+    protected function getHeatmapData($startDate, $endDate)
+    {
+        $rows = DB::table('enhanced_analytics_page_views')
+            ->select(
+                DB::raw('HOUR(visited_at) as hour'),
+                DB::raw('DAYOFWEEK(visited_at) as day'),
+                DB::raw('COUNT(*) as count')
+            )
+            ->whereBetween('visited_at', [$startDate, $endDate])
+            ->groupBy('hour', 'day')
+            ->get();
+
+        // Build a 7×24 matrix (day 1=Sunday ... 7=Saturday, reindex to 0=Monday…6=Sunday)
+        $matrix = [];
+        foreach ($rows as $row) {
+            // DAYOFWEEK: 1=Sun,2=Mon,...,7=Sat → remap to 0=Mon…6=Sun
+            $day = (($row->day + 5) % 7);
+            $matrix[] = [
+                'day'   => $day,
+                'hour'  => (int) $row->hour,
+                'count' => (int) $row->count,
+            ];
+        }
+
+        return $matrix;
+    }
+
+    protected function getNewVsReturningTrend($startDate, $endDate)
+    {
+        return DB::table('enhanced_analytics_page_views')
+            ->select(
+                DB::raw('DATE(visited_at) as date'),
+                DB::raw('SUM(CASE WHEN is_new_visitor = 1 THEN 1 ELSE 0 END) as new_visitors'),
+                DB::raw('SUM(CASE WHEN is_new_visitor = 0 THEN 1 ELSE 0 END) as returning_visitors')
+            )
+            ->whereBetween('visited_at', [$startDate, $endDate])
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+    }
+
+    protected function getSessionDepth($startDate, $endDate)
+    {
+        $sessions = DB::table('enhanced_analytics_page_views')
+            ->select('session_id', DB::raw('COUNT(*) as pages'))
+            ->whereBetween('visited_at', [$startDate, $endDate])
+            ->whereNotNull('session_id')
+            ->groupBy('session_id')
+            ->pluck('pages');
+
+        $buckets = [
+            '1'     => 0,
+            '2-3'   => 0,
+            '4-5'   => 0,
+            '6-10'  => 0,
+            '10+'   => 0,
+        ];
+
+        foreach ($sessions as $pages) {
+            if ($pages == 1) {
+                $buckets['1']++;
+            } elseif ($pages <= 3) {
+                $buckets['2-3']++;
+            } elseif ($pages <= 5) {
+                $buckets['4-5']++;
+            } elseif ($pages <= 10) {
+                $buckets['6-10']++;
+            } else {
+                $buckets['10+']++;
+            }
+        }
+
+        return collect($buckets)->map(fn($count, $label) => ['label' => $label, 'count' => $count])->values();
+    }
+
     public function export(Request $request)
     {
         $startDate = $this->getStartDate($request->input('range'), $request);
@@ -264,7 +424,6 @@ class AnalyticsDashboardController
         return response()->streamDownload(function () use ($data) {
             $output = fopen('php://output', 'w');
 
-            // Headers
             fputcsv($output, [
                 'Page URL',
                 'IP Address',
@@ -276,7 +435,6 @@ class AnalyticsDashboardController
                 'Visited At'
             ]);
 
-            // Data
             foreach ($data as $row) {
                 fputcsv($output, [
                     $row->page_url,
@@ -296,34 +454,25 @@ class AnalyticsDashboardController
 
     public function getGeolocationStats()
     {
-        $stats = \Mohammedshuaau\EnhancedAnalytics\Middleware\TrackPageVisit::getGeolocationStats();
+        $stats = \Oli217\EnhancedAnalytics\Middleware\TrackPageVisit::getGeolocationStats();
         return response()->json($stats);
     }
 
     public function clearGeolocationCache()
     {
-        \Mohammedshuaau\EnhancedAnalytics\Middleware\TrackPageVisit::clearGeolocationCache();
+        \Oli217\EnhancedAnalytics\Middleware\TrackPageVisit::clearGeolocationCache();
         return response()->json(['message' => 'Cache cleared successfully']);
     }
 
     protected function getComparisons($startDate, $endDate, $previousStartDate, $previousEndDate)
     {
-        $current = $this->getOverviewStats($startDate, $endDate);
+        $current  = $this->getOverviewStats($startDate, $endDate);
         $previous = $this->getOverviewStats($previousStartDate, $previousEndDate);
 
         return [
-            'total_visits' => $this->calculatePercentageChange(
-                $previous['total_visits'],
-                $current['total_visits']
-            ),
-            'unique_visitors' => $this->calculatePercentageChange(
-                $previous['unique_visitors'],
-                $current['unique_visitors']
-            ),
-            'bounce_rate' => $this->calculatePercentageChange(
-                $previous['bounce_rate'],
-                $current['bounce_rate']
-            )
+            'total_visits'    => $this->calculatePercentageChange($previous['total_visits'],    $current['total_visits']),
+            'unique_visitors' => $this->calculatePercentageChange($previous['unique_visitors'], $current['unique_visitors']),
+            'bounce_rate'     => $this->calculatePercentageChange($previous['bounce_rate'],     $current['bounce_rate']),
         ];
     }
 
@@ -345,36 +494,30 @@ class AnalyticsDashboardController
             ->where('is_new_visitor', false)
             ->count();
 
-        $sessions = DB::table('enhanced_analytics_page_views')
-            ->select('session_id')
+        $sessionCount = DB::table('enhanced_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->whereNotNull('session_id')
             ->distinct()
-            ->get();
+            ->count('session_id');
 
         $totalPageViews = DB::table('enhanced_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->count();
 
-        $sessionCount = $sessions->count();
         $pagesPerSession = $sessionCount > 0 ? $totalPageViews / $sessionCount : 0;
 
         return [
-            'new_visitors' => $newVisitors,
-            'returning_visitors' => $returningVisitors,
-            'pages_per_session' => $pagesPerSession,
-            'avg_session_duration' => $this->calculateAverageTimeOnSite($startDate, $endDate)
+            'new_visitors'        => $newVisitors,
+            'returning_visitors'  => $returningVisitors,
+            'pages_per_session'   => $pagesPerSession,
+            'avg_session_duration'=> $this->calculateAverageTimeOnSite($startDate, $endDate),
         ];
     }
 
     protected function getUserFlow($startDate, $endDate)
     {
-        // Get top entry pages
         $entryPages = DB::table('enhanced_analytics_page_views')
-            ->select(
-                'page_url',
-                DB::raw('COUNT(*) as count')
-            )
+            ->select('page_url', DB::raw('COUNT(*) as count'))
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->where('is_new_page_visit', true)
             ->groupBy('page_url')
@@ -382,7 +525,6 @@ class AnalyticsDashboardController
             ->limit(5)
             ->get();
 
-        // Get most engaged pages
         $engagedPages = collect();
         $pages = DB::table('enhanced_analytics_page_views')
             ->select('page_url', 'session_id', 'visited_at')
@@ -404,7 +546,7 @@ class AnalyticsDashboardController
                     $currentVisit = Carbon::parse($orderedVisits[$i]->visited_at);
                     $nextVisit = Carbon::parse($orderedVisits[$i + 1]->visited_at);
                     $timeDiff = $nextVisit->diffInSeconds($currentVisit);
-                    if ($timeDiff < 3600) { // Ignore differences more than an hour
+                    if ($timeDiff < 3600) {
                         $totalTime += $timeDiff;
                         $timeCount++;
                     }
@@ -413,15 +555,14 @@ class AnalyticsDashboardController
 
             if ($timeCount > 0) {
                 $engagedPages->push((object)[
-                    'url' => $url,
-                    'avg_time' => $totalTime / $timeCount
+                    'url'      => $url,
+                    'avg_time' => $totalTime / $timeCount,
                 ]);
             }
         }
 
         $engagedPages = $engagedPages->sortByDesc('avg_time')->take(5)->values();
 
-        // Get top exit pages
         $exitPages = collect();
         $pages = DB::table('enhanced_analytics_page_views')
             ->select('page_url', 'session_id', 'visited_at')
@@ -438,18 +579,18 @@ class AnalyticsDashboardController
             })->count();
 
             $exitPages->push((object)[
-                'url' => $url,
-                'exits' => $exits,
-                'exit_rate' => $totalVisits > 0 ? $exits / $totalVisits : 0
+                'url'       => $url,
+                'exits'     => $exits,
+                'exit_rate' => $totalVisits > 0 ? $exits / $totalVisits : 0,
             ]);
         }
 
         $exitPages = $exitPages->sortByDesc('exits')->take(5)->values();
 
         return [
-            'entry_pages' => $entryPages,
+            'entry_pages'   => $entryPages,
             'engaged_pages' => $engagedPages,
-            'exit_pages' => $exitPages
+            'exit_pages'    => $exitPages,
         ];
     }
 }

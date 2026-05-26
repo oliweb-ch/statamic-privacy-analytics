@@ -539,3 +539,131 @@
 .dark .ea-grid-cols-4>.ea-card .ea-text-lg {
     color: var(--ea-dark-text-primary);
 }
+
+/* ── Heatmap ─────────────────────────────────────────────────────────────── */
+.ea-heatmap-wrapper {
+    overflow-x: auto;
+    padding: 0.5rem 0;
+}
+
+.ea-heatmap-grid {
+    display: grid;
+    grid-template-columns: 3rem repeat(24, minmax(1.5rem, 1fr));
+    gap: 2px;
+    align-items: center;
+    min-width: 600px;
+}
+
+.ea-heatmap-label {
+    font-size: 0.65rem;
+    color: var(--ea-text-secondary);
+    text-align: right;
+    padding-right: 0.5rem;
+    white-space: nowrap;
+}
+
+.ea-heatmap-hour-label {
+    font-size: 0.6rem;
+    color: var(--ea-text-muted);
+    text-align: center;
+}
+
+.ea-heatmap-cell {
+    aspect-ratio: 1;
+    border-radius: 2px;
+    background-color: oklch(from var(--ea-primary) l c h / calc(0.1 + var(--intensity, 0) * 0.9));
+    cursor: default;
+    transition: opacity 0.15s;
+}
+
+.ea-heatmap-cell:hover {
+    opacity: 0.8;
+}
+
+.ea-heatmap-legend {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    justify-content: flex-end;
+    padding-right: 0.5rem;
+}
+
+.ea-heatmap-legend-gradient {
+    width: 80px;
+    height: 10px;
+    border-radius: 4px;
+    background: linear-gradient(to right, oklch(from var(--ea-primary) l c h / 0.1), var(--ea-primary));
+}
+
+/* ── Realtime Widget ─────────────────────────────────────────────────────── */
+.ea-realtime-card {
+    border-top: 3px solid var(--ea-danger);
+}
+
+.ea-live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--ea-danger);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 0.2rem 0.5rem;
+    border-radius: 9999px;
+    animation: ea-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.ea-live-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: white;
+    display: inline-block;
+}
+
+@keyframes ea-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.75; }
+}
+
+.ea-realtime-stat {
+    text-align: center;
+    padding: 1rem;
+    background: var(--ea-bg);
+    border-radius: 8px;
+}
+
+.ea-text-xl {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--ea-text-primary);
+}
+
+.ea-items-center { align-items: center; }
+.ea-gap-2        { gap: 0.5rem; }
+.ea-gap-4        { gap: 1rem; }
+.ea-mb-4         { margin-bottom: 1rem; }
+.ea-mt-3         { margin-top: 0.75rem; }
+.ea-space-y-2>*+* { margin-top: 0.5rem; }
+.ea-text-xs      { font-size: 0.75rem; }
+.ea-text-sm      { font-size: 0.875rem; }
+.ea-font-medium  { font-weight: 500; }
+.ea-font-bold    { font-weight: 700; }
+
+/* ── Progress bar (CityWidget) ───────────────────────────────────────────── */
+.ea-progress-bar {
+    height: 6px;
+    background: var(--ea-card-border);
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.ea-progress-fill {
+    height: 100%;
+    background: var(--ea-primary);
+    border-radius: 9999px;
+    transition: width 0.4s ease;
+}

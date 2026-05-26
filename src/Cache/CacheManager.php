@@ -1,6 +1,6 @@
 <?php
 
-namespace Mohammedshuaau\EnhancedAnalytics\Cache;
+namespace Oli217\EnhancedAnalytics\Cache;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;

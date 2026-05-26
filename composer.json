@@ -19,12 +19,12 @@
     ],
     "autoload": {
         "psr-4": {
-            "Mohammedshuaau\\EnhancedAnalytics\\": "src"
+            "Oli217\\EnhancedAnalytics\\": "src"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Mohammedshuaau\\EnhancedAnalytics\\Tests\\": "tests"
+            "Oli217\\EnhancedAnalytics\\Tests\\": "tests"
         }
     },
     "extra": {
@@ -34,7 +34,7 @@
         },
         "laravel": {
             "providers": [
-                "Mohammedshuaau\\EnhancedAnalytics\\ServiceProvider"
+                "Oli217\\EnhancedAnalytics\\ServiceProvider"
             ]
         }
     },

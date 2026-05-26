@@ -86,6 +86,42 @@ return [
     'top_exit_pages'     => 'Pages de sortie principales',
     'exit_points'        => 'Points de sortie',
 
+    // Sources de trafic (ReferrerWidget)
+    'traffic_sources' => 'Sources de trafic',
+    'domain'          => 'Domaine',
+    'source_direct'   => 'Direct',
+    'source_search'   => 'Recherche',
+    'source_social'   => 'Réseaux sociaux',
+    'source_referral' => 'Référent',
+
+    // Plateformes (PlatformWidget)
+    'platforms' => 'Plateformes / OS',
+
+    // Villes (CityWidget)
+    'top_cities' => 'Principales villes',
+    'city'       => 'Ville',
+
+    // Heatmap (HeatmapWidget)
+    'activity_heatmap' => 'Carte d\'activité',
+    'low_activity'     => 'Faible',
+    'high_activity'    => 'Élevée',
+
+    // Temps réel (RealTimeWidget)
+    'realtime_visitors' => 'Visiteurs en temps réel',
+    'active_sessions'   => 'Sessions actives',
+    'active_visitors'   => 'Visiteurs actifs',
+    'page_views'        => 'Pages vues',
+    'sessions'          => 'sessions',
+    'last_x_min'        => ':count dernières min',
+    'updates_every_30s' => 'Mis à jour toutes les 30 secondes',
+
+    // Nouveau vs récurrent (NewReturningTrendWidget)
+    'new_vs_returning_trend' => 'Nouveaux vs Récurrents',
+
+    // Profondeur de session (SessionDepthWidget)
+    'session_depth' => 'Profondeur de session',
+    'pages_abbr'    => 'p.',
+
     // Panneau de paramètres du bandeau de consentement
     'essential_analytics'              => 'Analytiques essentielles',
     'essential_analytics_description'  => 'Suivi de base des visites et monitoring des performances',

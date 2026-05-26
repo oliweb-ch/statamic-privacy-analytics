@@ -86,6 +86,42 @@ return [
     'top_exit_pages'     => 'Top Exit Pages',
     'exit_points'        => 'Exit points',
 
+    // Traffic sources (ReferrerWidget)
+    'traffic_sources'  => 'Traffic Sources',
+    'domain'           => 'Domain',
+    'source_direct'    => 'Direct',
+    'source_search'    => 'Search',
+    'source_social'    => 'Social',
+    'source_referral'  => 'Referral',
+
+    // Platforms (PlatformWidget)
+    'platforms' => 'Platforms / OS',
+
+    // Cities (CityWidget)
+    'top_cities' => 'Top Cities',
+    'city'       => 'City',
+
+    // Heatmap (HeatmapWidget)
+    'activity_heatmap' => 'Activity Heatmap',
+    'low_activity'     => 'Low',
+    'high_activity'    => 'High',
+
+    // Realtime (RealTimeWidget)
+    'realtime_visitors' => 'Real-Time Visitors',
+    'active_sessions'   => 'Active Sessions',
+    'active_visitors'   => 'Active Visitors',
+    'page_views'        => 'Page Views',
+    'sessions'          => 'sessions',
+    'last_x_min'        => 'Last :count min',
+    'updates_every_30s' => 'Updates every 30 seconds',
+
+    // New vs Returning trend (NewReturningTrendWidget)
+    'new_vs_returning_trend' => 'New vs. Returning Visitors',
+
+    // Session depth (SessionDepthWidget)
+    'session_depth' => 'Session Depth',
+    'pages_abbr'    => 'p.',
+
     // Consent banner settings panel
     'essential_analytics'              => 'Essential Analytics',
     'essential_analytics_description'  => 'Basic visit tracking and performance monitoring',
