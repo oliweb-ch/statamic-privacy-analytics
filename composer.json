@@ -2,6 +2,7 @@
     "name": "oliweb/statamic-privacy-analytics",
     "description": "A powerful, efficient analytics solution for Statamic with real-time tracking, caching, and comprehensive dashboard visualization.",
     "type": "statamic-addon",
+    "license": "MIT",
     "keywords": [
         "statamic",
         "statamic-addon",
