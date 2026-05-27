@@ -1,76 +1,63 @@
-<script>
-
-    // Initialize Alpine if it's not already initialized
-    if (!window.Alpine) {
-        window.Alpine = Alpine;
-        Alpine.start();
-    }
-
-    // Register the consent banner component
-    Alpine.data('consentBanner', () => ({
-        show: true,
-        showSettings: false,
-        settings: {
-            geolocation: true
-        },
-        init() {
-            // Check if consent is already stored
-            const storedConsent = localStorage.getItem('analytics_consent');
-            if (storedConsent) {
-                this.show = false;
-                return;
-            }
-            // Check if settings are stored
-            const storedSettings = localStorage.getItem('analytics_settings');
-            if (storedSettings) {
-                this.settings = JSON.parse(storedSettings);
-            }
-        },
-        toggleGeolocation() {
-            this.settings.geolocation = !this.settings.geolocation;
-        },
-        accept() {
-            this.saveConsent(true);
-            this.show = false;
-        },
-        decline() {
-            this.saveConsent(false);
-            this.show = false;
-        },
-        toggleSettings() {
-            this.showSettings = !this.showSettings;
-        },
-        saveConsent(accepted) {
-            // Store consent in localStorage
-            localStorage.setItem('analytics_consent', accepted ? 'accepted' : 'declined');
-            localStorage.setItem('analytics_settings', JSON.stringify(this.settings));
-
-            // Send consent to server
-            fetch('/statamic-analytics/consent', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify({
-                    consent: accepted,
-                    settings: this.settings
-                })
-            }).catch(error => console.error('Error saving consent:', error));
-
-            // Dispatch event for other scripts
-            window.dispatchEvent(new CustomEvent('analytics-consent-changed', {
-                detail: {
-                    consent: accepted,
-                    settings: this.settings
+<script nonce="{{ csp_nonce }}">
+    // Enregistrement du composant Alpine — attend que Alpine soit initialisé (chargé via Vite)
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('consentBanner', () => ({
+            show: true,
+            showSettings: false,
+            settings: {
+                geolocation: true
+            },
+            init() {
+                const storedConsent = localStorage.getItem('analytics_consent');
+                if (storedConsent) {
+                    this.show = false;
+                    return;
                 }
-            }));
-        }
-    }));
+                const storedSettings = localStorage.getItem('analytics_settings');
+                if (storedSettings) {
+                    this.settings = JSON.parse(storedSettings);
+                }
+            },
+            toggleGeolocation() {
+                this.settings.geolocation = !this.settings.geolocation;
+            },
+            accept() {
+                this.saveConsent(true);
+                this.show = false;
+            },
+            decline() {
+                this.saveConsent(false);
+                this.show = false;
+            },
+            toggleSettings() {
+                this.showSettings = !this.showSettings;
+            },
+            saveConsent(accepted) {
+                localStorage.setItem('analytics_consent', accepted ? 'accepted' : 'declined');
+                localStorage.setItem('analytics_settings', JSON.stringify(this.settings));
 
+                fetch('/statamic-analytics/consent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        consent: accepted,
+                        settings: this.settings
+                    })
+                }).catch(error => console.error('Error saving consent:', error));
 
+                window.dispatchEvent(new CustomEvent('analytics-consent-changed', {
+                    detail: {
+                        consent: accepted,
+                        settings: this.settings
+                    }
+                }));
+            }
+        }));
+    });
 </script>
-{{ statamic_analytics:AddonAssets }}
 
 <div x-data="consentBanner" x-cloak x-init="init()" x-show="show" style="display: none;"
      x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform translate-y-2"
@@ -142,7 +129,7 @@
                                     <div
                                         class="w-11 h-6 bg-gray-200 border border-gray-300 rounded-full peer dark:bg-gray-700 dark:border-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-checked:border-blue-600">
                                     </div>
-                                    <span class="sr-only">Enable geolocation tracking</span>
+                                    <span class="sr-only">Activer le suivi de géolocalisation</span>
                                 </button>
                             </div>
                         </div>
