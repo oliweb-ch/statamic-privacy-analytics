@@ -11,7 +11,7 @@ return [
     |
     */
     'cache' => [
-        'driver' => env('ENHANCED_ANALYTICS_CACHE_DRIVER', 'file'),
+        'driver' => env('STATAMIC_ANALYTICS_CACHE_DRIVER', 'file'),
 
         // File driver specific settings
         'file' => [

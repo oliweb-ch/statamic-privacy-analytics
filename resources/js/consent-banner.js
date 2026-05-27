@@ -44,7 +44,7 @@ Alpine.data('consentBanner', () => ({
         localStorage.setItem('analytics_settings', JSON.stringify(this.settings));
 
         // Send consent to server
-        fetch('/enhanced-analytics/consent', {
+        fetch('/statamic-analytics/consent', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

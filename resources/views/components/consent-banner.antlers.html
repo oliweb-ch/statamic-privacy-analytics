@@ -47,7 +47,7 @@
             localStorage.setItem('analytics_settings', JSON.stringify(this.settings));
 
             // Send consent to server
-            fetch('/enhanced-analytics/consent', {
+            fetch('/statamic-analytics/consent', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -78,13 +78,13 @@
      x-transition:enter-end="opacity-100 transform translate-y-0" x-transition:leave="transition ease-in duration-200"
      x-transition:leave-start="opacity-100 transform translate-y-0"
      x-transition:leave-end="opacity-0 transform translate-y-2"
-     class="fixed {{ config:enhanced-analytics:tracking:consent:banner:position === 'top' ?= 'top-0' }} {{ config:enhanced-analytics:tracking:consent:banner:position === 'bottom' ?= 'bottom-0' }} {{ config:enhanced-analytics:tracking:consent:banner:position === 'center' ?= 'top-1/2 -translate-y-1/2' }} left-0 right-0 z-50">
+     class="fixed {{ config:statamic-analytics:tracking:consent:banner:position === 'top' ?= 'top-0' }} {{ config:statamic-analytics:tracking:consent:banner:position === 'bottom' ?= 'bottom-0' }} {{ config:statamic-analytics:tracking:consent:banner:position === 'center' ?= 'top-1/2 -translate-y-1/2' }} left-0 right-0 z-50">
     <div class="max-w-screen-xl mx-auto p-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700">
             <div class="space-y-4">
                 <div class="flex justify-between items-start">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                        {{ config:enhanced-analytics:tracking:consent:banner:title }}
+                        {{ config:statamic-analytics:tracking:consent:banner:title }}
                     </h3>
                     <button x-on:click="show = false" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
                             aria-label="Close">
@@ -96,23 +96,23 @@
                 </div>
 
                 <p class="text-gray-600 dark:text-gray-300">
-                    {{ config:enhanced-analytics:tracking:consent:banner:description }}
+                    {{ config:statamic-analytics:tracking:consent:banner:description }}
                 </p>
 
                 <div class="flex flex-wrap gap-3 justify-end">
                     <button x-on:click="decline"
                             class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
-                        {{ config:enhanced-analytics:tracking:consent:banner:decline_button }}
+                        {{ config:statamic-analytics:tracking:consent:banner:decline_button }}
                     </button>
 
                     <button x-on:click="toggleSettings"
                             class="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
-                        {{ config:enhanced-analytics:tracking:consent:banner:settings_button }}
+                        {{ config:statamic-analytics:tracking:consent:banner:settings_button }}
                     </button>
 
                     <button x-on:click="accept"
                             class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
-                        {{ config:enhanced-analytics:tracking:consent:banner:accept_button }}
+                        {{ config:statamic-analytics:tracking:consent:banner:accept_button }}
                     </button>
                 </div>
 
@@ -120,8 +120,8 @@
                     <div class="space-y-4">
                         <div class="flex items-center justify-between">
                             <div>
-                                <h4 class="font-medium text-gray-900 dark:text-white">{{ trans:enhanced-analytics::messages.essential_analytics }}</h4>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ trans:enhanced-analytics::messages.essential_analytics_description }}</p>
+                                <h4 class="font-medium text-gray-900 dark:text-white">{{ trans:statamic-analytics::messages.essential_analytics }}</h4>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ trans:statamic-analytics::messages.essential_analytics_description }}</p>
                             </div>
                             <div class="relative">
                                 <input type="checkbox" checked disabled class="sr-only peer">
@@ -133,8 +133,8 @@
 
                         <div class="flex items-center justify-between">
                             <div>
-                                <h4 class="font-medium text-gray-900 dark:text-white">{{ trans:enhanced-analytics::messages.geolocation_tracking }}</h4>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ trans:enhanced-analytics::messages.geolocation_tracking_description }}</p>
+                                <h4 class="font-medium text-gray-900 dark:text-white">{{ trans:statamic-analytics::messages.geolocation_tracking }}</h4>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ trans:statamic-analytics::messages.geolocation_tracking_description }}</p>
                             </div>
                             <div class="relative">
                                 <button type="button" x-on:click="toggleGeolocation" role="switch"
