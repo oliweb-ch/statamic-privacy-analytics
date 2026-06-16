@@ -283,8 +283,8 @@ class AnalyticsDashboardController
             ->select(
                 DB::raw("CASE
                     WHEN referrer_url IS NULL OR referrer_url = '' THEN 'direct'
-                    WHEN referrer_url REGEXP 'google\\\\.|bing\\\\.|duckduckgo\\\\.|yahoo\\\\.|baidu\\\\.' THEN 'search'
-                    WHEN referrer_url REGEXP 'facebook\\\\.|twitter\\\\.|linkedin\\\\.|instagram\\\\.|youtube\\\\.' THEN 'social'
+                    WHEN (referrer_url LIKE '%google.%' OR referrer_url LIKE '%bing.%' OR referrer_url LIKE '%duckduckgo.%' OR referrer_url LIKE '%yahoo.%' OR referrer_url LIKE '%baidu.%') THEN 'search'
+                    WHEN (referrer_url LIKE '%facebook.%' OR referrer_url LIKE '%twitter.%' OR referrer_url LIKE '%linkedin.%' OR referrer_url LIKE '%instagram.%' OR referrer_url LIKE '%youtube.%') THEN 'social'
                     ELSE 'referral'
                 END as source"),
                 DB::raw('COUNT(*) as total')
@@ -294,17 +294,18 @@ class AnalyticsDashboardController
             ->get();
 
         $topDomains = DB::table('statamic_analytics_page_views')
-            ->select(
-                DB::raw("SUBSTRING_INDEX(SUBSTRING_INDEX(REPLACE(REPLACE(referrer_url, 'https://', ''), 'http://', ''), '/', 1), '?', 1) as domain"),
-                DB::raw('COUNT(*) as total')
-            )
+            ->select('referrer_url')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->whereNotNull('referrer_url')
             ->where('referrer_url', '!=', '')
-            ->groupBy('domain')
-            ->orderByDesc('total')
-            ->limit(10)
-            ->get();
+            ->get()
+            ->groupBy(function ($row) {
+                return explode('?', parse_url($row->referrer_url, PHP_URL_HOST) ?? $row->referrer_url)[0];
+            })
+            ->map(fn ($group, $domain) => (object) ['domain' => $domain, 'total' => $group->count()])
+            ->sortByDesc('total')
+            ->take(10)
+            ->values();
 
         return [
             'sources'     => $sources,
