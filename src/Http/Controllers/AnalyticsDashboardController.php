@@ -342,8 +342,8 @@ class AnalyticsDashboardController
     {
         $rows = DB::table('statamic_analytics_page_views')
             ->select(
-                DB::raw('HOUR(visited_at) as hour'),
-                DB::raw('DAYOFWEEK(visited_at) as day'),
+                DB::raw("CAST(strftime('%H', visited_at) AS INTEGER) as hour"),
+                DB::raw("CAST(strftime('%w', visited_at) AS INTEGER) + 1 as day"),
                 DB::raw('COUNT(*) as count')
             )
             ->whereBetween('visited_at', [$startDate, $endDate])
