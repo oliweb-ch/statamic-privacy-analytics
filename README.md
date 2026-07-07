@@ -181,4 +181,4 @@ Geolocation (IP → country/city) is resolved via ip-api.com and cached locally.
 MIT — see [LICENSE.md](LICENSE.md).
 
 Original work © 2024 Mohammed Shuaau.
-Modifications © 2026 Olivier (oliweb).
+Modifications © 2026 Olivier Petrucciani (OliWeb - oliweb.ch).
