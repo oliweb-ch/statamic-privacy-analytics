@@ -95,7 +95,7 @@ Users who hold `analytics.view` but not `analytics.manage` will see the dashboar
 
 - PHP ≥ 8.3
 - Statamic ≥ 6.0
-- Any database engine supported by your Statamic/Laravel installation — the addon uses Laravel's database abstraction exclusively and does not require a specific engine. Tested in CI against: SQLite, MySQL 8.0, MariaDB 11.
+- Any database engine supported by your Statamic/Laravel installation — the addon uses Laravel's database abstraction exclusively and does not require a specific engine. Tested in CI against: SQLite, MySQL 8.0, MariaDB 11, PostgreSQL 16.
 
 ---
 

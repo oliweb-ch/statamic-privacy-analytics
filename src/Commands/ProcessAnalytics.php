@@ -68,9 +68,9 @@ class ProcessAnalytics extends Command
                     DB::raw("'{$dimension}' as dimension"),
                     DB::raw("{$dimension} as dimension_value"),
                     DB::raw('COUNT(*) as total_visits'),
-                    DB::raw('SUM(CASE WHEN is_new_visitor = 1 THEN 1 ELSE 0 END) as unique_visitors'),
-                    DB::raw('SUM(CASE WHEN is_new_page_visit = 1 THEN 1 ELSE 0 END) as unique_page_views'),
-                    DB::raw('SUM(CASE WHEN is_new_visitor = 0 THEN 1 ELSE 0 END) as returning_visitors')
+                    DB::raw('SUM(CASE WHEN is_new_visitor THEN 1 ELSE 0 END) as unique_visitors'),
+                    DB::raw('SUM(CASE WHEN is_new_page_visit THEN 1 ELSE 0 END) as unique_page_views'),
+                    DB::raw('SUM(CASE WHEN is_new_visitor THEN 0 ELSE 1 END) as returning_visitors')
                 )
                 ->where('visited_at', '>=', Carbon::parse($date)->startOfDay())
                 ->where('visited_at', '<', Carbon::parse($date)->addDay()->startOfDay())
@@ -107,9 +107,9 @@ class ProcessAnalytics extends Command
             ->where('visited_at', '<', Carbon::parse($date)->addDay()->startOfDay())
             ->selectRaw('
                 COUNT(*) as total_visits,
-                SUM(CASE WHEN is_new_visitor = 1 THEN 1 ELSE 0 END) as unique_visitors,
-                SUM(CASE WHEN is_new_page_visit = 1 THEN 1 ELSE 0 END) as unique_page_views,
-                SUM(CASE WHEN is_new_visitor = 0 THEN 1 ELSE 0 END) as returning_visitors
+                SUM(CASE WHEN is_new_visitor THEN 1 ELSE 0 END) as unique_visitors,
+                SUM(CASE WHEN is_new_page_visit THEN 1 ELSE 0 END) as unique_page_views,
+                SUM(CASE WHEN is_new_visitor THEN 0 ELSE 1 END) as returning_visitors
             ')
             ->first();
 
