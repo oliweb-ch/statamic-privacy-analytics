@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use Oliweb\StatamicAnalytics\Support\AnalyticsDB;
 
 class AnalyticsDashboardController
 {
@@ -85,7 +86,7 @@ class AnalyticsDashboardController
     {
         $threshold = Carbon::now()->subMinutes(30);
 
-        $totals = DB::table('statamic_analytics_page_views')
+        $totals = AnalyticsDB::table('statamic_analytics_page_views')
             ->where('visited_at', '>=', $threshold)
             ->select(
                 DB::raw('COUNT(DISTINCT session_id) as active_sessions'),
@@ -97,7 +98,7 @@ class AnalyticsDashboardController
         $breakdowns = [];
         foreach ([5, 15, 30] as $minutes) {
             $since = Carbon::now()->subMinutes($minutes);
-            $breakdowns["last_{$minutes}min"] = DB::table('statamic_analytics_page_views')
+            $breakdowns["last_{$minutes}min"] = AnalyticsDB::table('statamic_analytics_page_views')
                 ->where('visited_at', '>=', $since)
                 ->select(
                     DB::raw('COUNT(DISTINCT session_id) as active_sessions'),
@@ -129,16 +130,16 @@ class AnalyticsDashboardController
 
     protected function getOverviewStats($startDate, $endDate)
     {
-        $totalVisits = DB::table('statamic_analytics_page_views')
+        $totalVisits = AnalyticsDB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->count();
 
-        $uniqueVisitors = DB::table('statamic_analytics_page_views')
+        $uniqueVisitors = AnalyticsDB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->where('is_new_visitor', true)
             ->count();
 
-        $bounceRate = DB::table('statamic_analytics_page_views')
+        $bounceRate = AnalyticsDB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->where('is_new_page_visit', true)
             ->count() / ($totalVisits ?: 1);
@@ -153,7 +154,7 @@ class AnalyticsDashboardController
 
     protected function getPageViewsData($startDate, $endDate)
     {
-        return DB::table('statamic_analytics_page_views')
+        return AnalyticsDB::table('statamic_analytics_page_views')
             ->select(
                 DB::raw('DATE(visited_at) as date'),
                 DB::raw('COUNT(*) as total_views'),
@@ -167,7 +168,7 @@ class AnalyticsDashboardController
 
     protected function getTopPages($startDate, $endDate, $limit = 10)
     {
-        $pages = DB::table('statamic_analytics_page_views as a')
+        $pages = AnalyticsDB::table('statamic_analytics_page_views as a')
             ->select(
                 'page_url',
                 DB::raw('COUNT(*) as views'),
@@ -181,7 +182,7 @@ class AnalyticsDashboardController
             ->get();
 
         foreach ($pages as $page) {
-            $sessions = DB::table('statamic_analytics_page_views')
+            $sessions = AnalyticsDB::table('statamic_analytics_page_views')
                 ->select('session_id', 'visited_at')
                 ->where('page_url', $page->page_url)
                 ->whereBetween('visited_at', [$startDate, $endDate])
@@ -209,7 +210,7 @@ class AnalyticsDashboardController
             $page->avg_time = $timeCount > 0 ? $totalTime / $timeCount : 0;
 
             $totalPageViews = $page->views;
-            $exits = DB::table('statamic_analytics_page_views as a')
+            $exits = AnalyticsDB::table('statamic_analytics_page_views as a')
                 ->where('page_url', $page->page_url)
                 ->whereBetween('visited_at', [$startDate, $endDate])
                 ->whereNotExists(function ($query) {
@@ -228,7 +229,7 @@ class AnalyticsDashboardController
 
     protected function getDeviceStats($startDate, $endDate)
     {
-        return DB::table('statamic_analytics_aggregates')
+        return AnalyticsDB::table('statamic_analytics_aggregates')
             ->where('dimension', 'device_type')
             ->where('type', 'daily')
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
@@ -239,7 +240,7 @@ class AnalyticsDashboardController
 
     protected function getCountryStats($startDate, $endDate)
     {
-        return DB::table('statamic_analytics_aggregates')
+        return AnalyticsDB::table('statamic_analytics_aggregates')
             ->where('dimension', 'country_code')
             ->where('type', 'daily')
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
@@ -252,7 +253,7 @@ class AnalyticsDashboardController
 
     protected function getBrowserStats($startDate, $endDate)
     {
-        return DB::table('statamic_analytics_aggregates')
+        return AnalyticsDB::table('statamic_analytics_aggregates')
             ->where('dimension', 'browser')
             ->where('type', 'daily')
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
@@ -264,7 +265,7 @@ class AnalyticsDashboardController
 
     protected function calculateAverageTimeOnSite($startDate, $endDate)
     {
-        $sessions = DB::table('statamic_analytics_page_views')
+        $sessions = AnalyticsDB::table('statamic_analytics_page_views')
             ->select('session_id', 'visited_at')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->whereNotNull('session_id')
@@ -289,7 +290,7 @@ class AnalyticsDashboardController
 
     protected function getReferrerStats($startDate, $endDate)
     {
-        $sources = DB::table('statamic_analytics_page_views')
+        $sources = AnalyticsDB::table('statamic_analytics_page_views')
             ->select(
                 DB::raw("CASE
                     WHEN referrer_url IS NULL OR referrer_url = '' THEN 'direct'
@@ -303,7 +304,7 @@ class AnalyticsDashboardController
             ->groupBy('source')
             ->get();
 
-        $topDomains = DB::table('statamic_analytics_page_views')
+        $topDomains = AnalyticsDB::table('statamic_analytics_page_views')
             ->select('referrer_url')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->whereNotNull('referrer_url')
@@ -325,7 +326,7 @@ class AnalyticsDashboardController
 
     protected function getPlatformStats($startDate, $endDate)
     {
-        return DB::table('statamic_analytics_page_views')
+        return AnalyticsDB::table('statamic_analytics_page_views')
             ->select('platform', DB::raw('COUNT(*) as total'))
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->whereNotNull('platform')
@@ -337,7 +338,7 @@ class AnalyticsDashboardController
 
     protected function getCityStats($startDate, $endDate)
     {
-        return DB::table('statamic_analytics_page_views')
+        return AnalyticsDB::table('statamic_analytics_page_views')
             ->select('city', 'country_name', DB::raw('COUNT(*) as total'))
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->whereNotNull('city')
@@ -350,15 +351,21 @@ class AnalyticsDashboardController
 
     protected function getHeatmapData($startDate, $endDate)
     {
-        $driver = DB::getDriverName();
-        $hourExpr = $driver === 'sqlite'
-            ? "CAST(strftime('%H', visited_at) AS INTEGER)"
-            : "HOUR(visited_at)";
-        $dayExpr  = $driver === 'sqlite'
-            ? "CAST(strftime('%w', visited_at) AS INTEGER) + 1"
-            : "DAYOFWEEK(visited_at)";
+        $driver = AnalyticsDB::connection()->getDriverName();
+        $hourExpr = match ($driver) {
+            'sqlite' => "CAST(strftime('%H', visited_at) AS INTEGER)",
+            'pgsql'  => 'EXTRACT(HOUR FROM visited_at)',
+            default  => 'HOUR(visited_at)',
+        };
+        // Normalized to MySQL's DAYOFWEEK() convention (1=Sunday..7=Saturday) so the
+        // remapping below (`($row->day + 5) % 7`) works the same across drivers.
+        $dayExpr = match ($driver) {
+            'sqlite' => "CAST(strftime('%w', visited_at) AS INTEGER) + 1",
+            'pgsql'  => 'EXTRACT(DOW FROM visited_at) + 1',
+            default  => 'DAYOFWEEK(visited_at)',
+        };
 
-        $rows = DB::table('statamic_analytics_page_views')
+        $rows = AnalyticsDB::table('statamic_analytics_page_views')
             ->select(
                 DB::raw("$hourExpr as hour"),
                 DB::raw("$dayExpr as day"),
@@ -385,7 +392,7 @@ class AnalyticsDashboardController
 
     protected function getNewVsReturningTrend($startDate, $endDate)
     {
-        return DB::table('statamic_analytics_page_views')
+        return AnalyticsDB::table('statamic_analytics_page_views')
             ->select(
                 DB::raw('DATE(visited_at) as date'),
                 DB::raw('SUM(CASE WHEN is_new_visitor THEN 1 ELSE 0 END) as new_visitors'),
@@ -399,7 +406,7 @@ class AnalyticsDashboardController
 
     protected function getSessionDepth($startDate, $endDate)
     {
-        $sessions = DB::table('statamic_analytics_page_views')
+        $sessions = AnalyticsDB::table('statamic_analytics_page_views')
             ->select('session_id', DB::raw('COUNT(*) as pages'))
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->whereNotNull('session_id')
@@ -436,7 +443,7 @@ class AnalyticsDashboardController
         $startDate = $this->getStartDate($request->input('range'), $request);
         $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date')) : Carbon::now();
 
-        $data = DB::table('statamic_analytics_page_views')
+        $data = AnalyticsDB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->cursor();
 
@@ -516,23 +523,23 @@ class AnalyticsDashboardController
 
     protected function getEngagementMetrics($startDate, $endDate)
     {
-        $newVisitors = DB::table('statamic_analytics_page_views')
+        $newVisitors = AnalyticsDB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->where('is_new_visitor', true)
             ->count();
 
-        $returningVisitors = DB::table('statamic_analytics_page_views')
+        $returningVisitors = AnalyticsDB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->where('is_new_visitor', false)
             ->count();
 
-        $sessionCount = DB::table('statamic_analytics_page_views')
+        $sessionCount = AnalyticsDB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->whereNotNull('session_id')
             ->distinct()
             ->count('session_id');
 
-        $totalPageViews = DB::table('statamic_analytics_page_views')
+        $totalPageViews = AnalyticsDB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->count();
 
@@ -548,7 +555,7 @@ class AnalyticsDashboardController
 
     protected function getUserFlow($startDate, $endDate)
     {
-        $entryPages = DB::table('statamic_analytics_page_views')
+        $entryPages = AnalyticsDB::table('statamic_analytics_page_views')
             ->select('page_url', DB::raw('COUNT(*) as count'))
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->where('is_new_page_visit', true)
@@ -558,7 +565,7 @@ class AnalyticsDashboardController
             ->get();
 
         $engagedPages = collect();
-        $pages = DB::table('statamic_analytics_page_views')
+        $pages = AnalyticsDB::table('statamic_analytics_page_views')
             ->select('page_url', 'session_id', 'visited_at')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->whereNotNull('session_id')
@@ -596,7 +603,7 @@ class AnalyticsDashboardController
         $engagedPages = $engagedPages->sortByDesc('avg_time')->take(5)->values();
 
         $exitPages = collect();
-        $pages = DB::table('statamic_analytics_page_views')
+        $pages = AnalyticsDB::table('statamic_analytics_page_views')
             ->select('page_url', 'session_id', 'visited_at')
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->get()

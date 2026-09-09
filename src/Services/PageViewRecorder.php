@@ -2,8 +2,8 @@
 
 namespace Oliweb\StatamicAnalytics\Services;
 
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Oliweb\StatamicAnalytics\Support\AnalyticsDB;
 
 class PageViewRecorder
 {
@@ -12,7 +12,7 @@ class PageViewRecorder
         $ipAddress = $data['ip_address'] ?? '';
         $geoData = (new GeolocationService())->lookup((string) $ipAddress);
 
-        $inserted = DB::table('statamic_analytics_page_views')->insertOrIgnore(array_merge($data, [
+        $inserted = AnalyticsDB::table('statamic_analytics_page_views')->insertOrIgnore(array_merge($data, [
             'country_code' => $geoData['country_code'],
             'country_name' => $geoData['country_name'],
             'city'         => $geoData['city'],

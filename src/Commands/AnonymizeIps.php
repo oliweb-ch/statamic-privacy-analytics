@@ -3,7 +3,7 @@
 namespace Oliweb\StatamicAnalytics\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
+use Oliweb\StatamicAnalytics\Support\AnalyticsDB;
 
 class AnonymizeIps extends Command
 {
@@ -28,7 +28,7 @@ class AnonymizeIps extends Command
 
         $threshold = now()->subDays((int) $retentionDays);
 
-        $query = fn () => DB::table('statamic_analytics_page_views')
+        $query = fn () => AnalyticsDB::table('statamic_analytics_page_views')
             ->where('visited_at', '<', $threshold)
             ->where(function ($q) {
                 $q->whereNotNull('ip_address')
@@ -48,7 +48,7 @@ class AnonymizeIps extends Command
         $query()->chunkById($chunkSize, function ($rows) use (&$anonymized) {
             $ids = $rows->pluck('id')->all();
 
-            DB::table('statamic_analytics_page_views')
+            AnalyticsDB::table('statamic_analytics_page_views')
                 ->whereIn('id', $ids)
                 ->update(['ip_address' => null, 'user_agent' => null, 'user_id' => null]);
 

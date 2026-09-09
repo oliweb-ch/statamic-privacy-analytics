@@ -3,7 +3,7 @@
 namespace Oliweb\StatamicAnalytics\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
+use Oliweb\StatamicAnalytics\Support\AnalyticsDB;
 
 class PurgeRawEvents extends Command
 {
@@ -28,7 +28,7 @@ class PurgeRawEvents extends Command
 
         $threshold = now()->subDays((int) $rawRetentionDays);
 
-        $query = fn () => DB::table('statamic_analytics_page_views')
+        $query = fn () => AnalyticsDB::table('statamic_analytics_page_views')
             ->where('visited_at', '<', $threshold);
 
         if ($this->option('dry-run')) {
@@ -43,7 +43,7 @@ class PurgeRawEvents extends Command
         $query()->chunkById($chunkSize, function ($rows) use (&$deleted) {
             $ids = $rows->pluck('id')->all();
 
-            DB::table('statamic_analytics_page_views')
+            AnalyticsDB::table('statamic_analytics_page_views')
                 ->whereIn('id', $ids)
                 ->delete();
 

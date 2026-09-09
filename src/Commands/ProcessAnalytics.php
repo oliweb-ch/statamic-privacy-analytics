@@ -3,10 +3,10 @@
 namespace Oliweb\StatamicAnalytics\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Oliweb\StatamicAnalytics\Support\AnalyticsDB;
 
 class ProcessAnalytics extends Command
 {
@@ -33,7 +33,7 @@ class ProcessAnalytics extends Command
             }
 
             foreach ($dates as $date) {
-                DB::transaction(function () use ($date) {
+                AnalyticsDB::connection()->transaction(function () use ($date) {
                     $this->rebuildAggregatesForDate($date);
                 });
             }
@@ -56,14 +56,14 @@ class ProcessAnalytics extends Command
 
         foreach ($dimensions as $dimension) {
             // Delete existing aggregates for this date/dimension
-            DB::table('statamic_analytics_aggregates')
+            AnalyticsDB::table('statamic_analytics_aggregates')
                 ->where('type', 'daily')
                 ->where('date', $date)
                 ->where('dimension', $dimension)
                 ->delete();
 
             // Re-insert from page_views
-            $rows = DB::table('statamic_analytics_page_views')
+            $rows = AnalyticsDB::table('statamic_analytics_page_views')
                 ->select(
                     DB::raw("'{$dimension}' as dimension"),
                     DB::raw("{$dimension} as dimension_value"),
@@ -81,7 +81,7 @@ class ProcessAnalytics extends Command
 
             $now = Carbon::now();
             foreach ($rows as $row) {
-                DB::table('statamic_analytics_aggregates')->insert([
+                AnalyticsDB::table('statamic_analytics_aggregates')->insert([
                     'type'              => 'daily',
                     'date'              => $date,
                     'dimension'         => $dimension,
@@ -96,13 +96,13 @@ class ProcessAnalytics extends Command
         }
 
         // Agrégat _overview : résumé journalier sans groupement, survit à la purge des événements bruts
-        DB::table('statamic_analytics_aggregates')
+        AnalyticsDB::table('statamic_analytics_aggregates')
             ->where('type', 'daily')
             ->where('date', $date)
             ->where('dimension', '_overview')
             ->delete();
 
-        $overview = DB::table('statamic_analytics_page_views')
+        $overview = AnalyticsDB::table('statamic_analytics_page_views')
             ->where('visited_at', '>=', Carbon::parse($date)->startOfDay())
             ->where('visited_at', '<', Carbon::parse($date)->addDay()->startOfDay())
             ->selectRaw('
@@ -113,7 +113,7 @@ class ProcessAnalytics extends Command
             ')
             ->first();
 
-        DB::table('statamic_analytics_aggregates')->insert([
+        AnalyticsDB::table('statamic_analytics_aggregates')->insert([
             'type'               => 'daily',
             'date'               => $date,
             'dimension'          => '_overview',

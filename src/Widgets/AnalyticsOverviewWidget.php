@@ -3,7 +3,7 @@
 namespace Oliweb\StatamicAnalytics\Widgets;
 
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
+use Oliweb\StatamicAnalytics\Support\AnalyticsDB;
 use Statamic\Widgets\Widget;
 
 class AnalyticsOverviewWidget extends Widget
@@ -17,11 +17,11 @@ class AnalyticsOverviewWidget extends Widget
         }
 
         try {
-            $todayVisits = DB::table('statamic_analytics_page_views')
+            $todayVisits = AnalyticsDB::table('statamic_analytics_page_views')
                 ->where('visited_at', '>=', Carbon::today())->count();
-            $totalVisits7d = DB::table('statamic_analytics_page_views')
+            $totalVisits7d = AnalyticsDB::table('statamic_analytics_page_views')
                 ->where('visited_at', '>=', Carbon::now()->subDays(7))->count();
-            $uniqueVisitors7d = DB::table('statamic_analytics_page_views')
+            $uniqueVisitors7d = AnalyticsDB::table('statamic_analytics_page_views')
                 ->where('visited_at', '>=', Carbon::now()->subDays(7))
                 ->where('is_new_visitor', true)->count();
         } catch (\Exception $e) {
