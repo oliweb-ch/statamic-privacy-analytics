@@ -157,7 +157,7 @@ class AnalyticsDashboardController
             ->select(
                 DB::raw('DATE(visited_at) as date'),
                 DB::raw('COUNT(*) as total_views'),
-                DB::raw('COUNT(CASE WHEN is_new_page_visit = 1 THEN 1 END) as unique_views')
+                DB::raw('COUNT(CASE WHEN is_new_page_visit THEN 1 END) as unique_views')
             )
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->groupBy('date')
@@ -171,8 +171,8 @@ class AnalyticsDashboardController
             ->select(
                 'page_url',
                 DB::raw('COUNT(*) as views'),
-                DB::raw('COUNT(CASE WHEN is_new_page_visit = 1 THEN 1 END) as unique_views'),
-                DB::raw('COUNT(CASE WHEN is_new_page_visit = 1 AND is_new_visitor = 1 THEN 1 END) / COUNT(CASE WHEN is_new_page_visit = 1 THEN 1 END) as bounce_rate')
+                DB::raw('COUNT(CASE WHEN is_new_page_visit THEN 1 END) as unique_views'),
+                DB::raw('COUNT(CASE WHEN is_new_page_visit AND is_new_visitor THEN 1 END) / COUNT(CASE WHEN is_new_page_visit THEN 1 END) as bounce_rate')
             )
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->groupBy('page_url')
@@ -388,8 +388,8 @@ class AnalyticsDashboardController
         return DB::table('statamic_analytics_page_views')
             ->select(
                 DB::raw('DATE(visited_at) as date'),
-                DB::raw('SUM(CASE WHEN is_new_visitor = 1 THEN 1 ELSE 0 END) as new_visitors'),
-                DB::raw('SUM(CASE WHEN is_new_visitor = 0 THEN 1 ELSE 0 END) as returning_visitors')
+                DB::raw('SUM(CASE WHEN is_new_visitor THEN 1 ELSE 0 END) as new_visitors'),
+                DB::raw('SUM(CASE WHEN NOT is_new_visitor THEN 1 ELSE 0 END) as returning_visitors')
             )
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->groupBy('date')
