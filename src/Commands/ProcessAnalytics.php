@@ -4,6 +4,7 @@ namespace Oliweb\StatamicAnalytics\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Oliweb\StatamicAnalytics\Support\AnalyticsDB;
