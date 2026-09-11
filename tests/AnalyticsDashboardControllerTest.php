@@ -237,4 +237,27 @@ class AnalyticsDashboardControllerTest extends TestCase
         $this->assertIsArray($data['user_flow']['engaged_pages']);
         $this->assertEmpty($data['user_flow']['engaged_pages']);
     }
+
+    // -------------------------------------------------------------------------
+    // 7. top_pages sans aucune is_new_page_visit — pas de division par zéro
+    // -------------------------------------------------------------------------
+
+  #[Test]
+  public function test_top_pages_bounce_rate_sans_new_page_visit_ne_plante_pas(): void
+  {
+      // Toutes les lignes avec is_new_page_visit = false (valeur par défaut de insertPageView)
+      // → COUNT(CASE WHEN is_new_page_visit ...) = 0 → division par zéro sur Postgres sans NULLIF
+      $this->insertPageView($this->ts(10), ['page_url' => '/contact']);
+      $this->insertPageView($this->ts(11), ['page_url' => '/contact']);
+
+      $data = $this->getData();
+
+      $contact = collect($data['top_pages'])->first(fn ($p) => $p['page_url'] === '/contact');
+      $this->assertNotNull($contact, '/contact doit apparaître dans top_pages.');
+      $this->assertNull(
+          $contact['bounce_rate'],
+          'bounce_rate doit être null quand aucune visite n\'est une new_page_visit (NULLIF protège la division par zéro).'
+      );
+  }
+
 }
