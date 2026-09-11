@@ -173,7 +173,8 @@ class AnalyticsDashboardController
                 'page_url',
                 DB::raw('COUNT(*) as views'),
                 DB::raw('COUNT(CASE WHEN is_new_page_visit THEN 1 END) as unique_views'),
-                DB::raw('COUNT(CASE WHEN is_new_page_visit AND is_new_visitor THEN 1 END) / COUNT(CASE WHEN is_new_page_visit THEN 1 END) as bounce_rate')
+                DB::raw('COUNT(CASE WHEN is_new_page_visit AND is_new_visitor THEN 1 END) / NULLIF(COUNT(CASE WHEN is_new_page_visit THEN 1 END), 0) as
+  bounce_rate')
             )
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->groupBy('page_url')
