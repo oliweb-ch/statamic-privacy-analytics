@@ -182,6 +182,8 @@ return [
         'ip_retention_days' => env('ANALYTICS_IP_RETENTION_DAYS', 90), // null = unlimited (not recommended)
     ],
 
+    'database_connection' => env('ANALYTICS_DB_CONNECTION', null),
+
     'enable_debugging' => false,
 ];
 ```
@@ -189,6 +191,13 @@ return [
 ### Configuration notes
 
 **`privacy.ip_retention_days`** — Number of days `ip_address`, `user_agent`, and `user_id` are kept before anonymisation. `null` disables automatic anonymisation — not recommended, and unlimited retention may be difficult to justify depending on the requirements applicable to your deployment. See [IP retention](#ip-retention).
+
+**`database_connection`** — The Laravel database connection used for all `statamic_analytics_*` tables and migrations. `null` (default) follows the application's default connection — no behavior change for existing installs. Set this when analytics data must live on a specific connection regardless of the app default (e.g. a shared analytics database consistent across environments):
+
+```
+# .env
+ANALYTICS_DB_CONNECTION=mysql   # use a specific connection
+```
 
 **`enable_debugging`** — Enables detailed logging in the tracking middleware. Leave this `false` outside of development.
 
