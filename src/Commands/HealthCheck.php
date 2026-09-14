@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Oliweb\StatamicAnalytics\Support\AnalyticsDB;
 
 class HealthCheck extends Command
 {
@@ -96,23 +97,25 @@ class HealthCheck extends Command
 
     private function checkDatabase(): void
     {
+        $connectionName = config('statamic-analytics.database_connection') ?? config('database.default');
+
         try {
-            DB::connection()->getPdo();
+            AnalyticsDB::connection()->getPdo();
         } catch (\Exception $e) {
-            $this->printFail('Database', 'Cannot connect: ' . $e->getMessage());
+            $this->printFail('Database', "Cannot connect ({$connectionName}): " . $e->getMessage());
             return;
         }
 
         $tables = ['statamic_analytics_page_views', 'statamic_analytics_aggregates'];
-        $missing = array_values(array_filter($tables, fn ($t) => !Schema::hasTable($t)));
+        $missing = array_values(array_filter($tables, fn ($t) => !AnalyticsDB::schema()->hasTable($t)));
 
         if ($missing) {
-            $this->printFail('Database', 'Missing tables: ' . implode(', ', $missing) . ' — run: php artisan migrate');
+            $this->printFail('Database', 'Missing tables: ' . implode(', ', $missing) . " on connection '{$connectionName}' — run: php artisan migrate");
             return;
         }
 
-        $count = DB::table('statamic_analytics_page_views')->count();
-        $this->printOk('Database', "({$count} events)");
+        $count = AnalyticsDB::table('statamic_analytics_page_views')->count();
+        $this->printOk('Database', "({$connectionName}, {$count} events)");
     }
 
     private function checkCache(): void

@@ -56,6 +56,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Database Connection
+    |--------------------------------------------------------------------------
+    |
+    | The database connection used for every statamic_analytics_* table
+    | (page views, aggregates). Null falls back to the app's default
+    | connection. Set this when analytics data needs to live on its own
+    | connection regardless of what the app default is — e.g. a shared
+    | connection that must stay the same across every environment.
+    |
+    */
+    'database_connection' => env('ANALYTICS_DB_CONNECTION'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Processing Settings
     |--------------------------------------------------------------------------
     |

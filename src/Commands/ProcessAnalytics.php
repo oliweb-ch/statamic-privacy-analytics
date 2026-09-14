@@ -3,10 +3,11 @@
 namespace Oliweb\StatamicAnalytics\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Oliweb\StatamicAnalytics\Support\AnalyticsDB;
 
 class ProcessAnalytics extends Command
 {
@@ -33,7 +34,7 @@ class ProcessAnalytics extends Command
             }
 
             foreach ($dates as $date) {
-                DB::transaction(function () use ($date) {
+                AnalyticsDB::connection()->transaction(function () use ($date) {
                     $this->rebuildAggregatesForDate($date);
                 });
             }
@@ -56,21 +57,21 @@ class ProcessAnalytics extends Command
 
         foreach ($dimensions as $dimension) {
             // Delete existing aggregates for this date/dimension
-            DB::table('statamic_analytics_aggregates')
+            AnalyticsDB::table('statamic_analytics_aggregates')
                 ->where('type', 'daily')
                 ->where('date', $date)
                 ->where('dimension', $dimension)
                 ->delete();
 
             // Re-insert from page_views
-            $rows = DB::table('statamic_analytics_page_views')
+            $rows = AnalyticsDB::table('statamic_analytics_page_views')
                 ->select(
                     DB::raw("'{$dimension}' as dimension"),
                     DB::raw("{$dimension} as dimension_value"),
                     DB::raw('COUNT(*) as total_visits'),
-                    DB::raw('SUM(CASE WHEN is_new_visitor = 1 THEN 1 ELSE 0 END) as unique_visitors'),
-                    DB::raw('SUM(CASE WHEN is_new_page_visit = 1 THEN 1 ELSE 0 END) as unique_page_views'),
-                    DB::raw('SUM(CASE WHEN is_new_visitor = 0 THEN 1 ELSE 0 END) as returning_visitors')
+                    DB::raw('SUM(CASE WHEN is_new_visitor THEN 1 ELSE 0 END) as unique_visitors'),
+                    DB::raw('SUM(CASE WHEN is_new_page_visit THEN 1 ELSE 0 END) as unique_page_views'),
+                    DB::raw('SUM(CASE WHEN is_new_visitor THEN 0 ELSE 1 END) as returning_visitors')
                 )
                 ->where('visited_at', '>=', Carbon::parse($date)->startOfDay())
                 ->where('visited_at', '<', Carbon::parse($date)->addDay()->startOfDay())
@@ -81,7 +82,7 @@ class ProcessAnalytics extends Command
 
             $now = Carbon::now();
             foreach ($rows as $row) {
-                DB::table('statamic_analytics_aggregates')->insert([
+                AnalyticsDB::table('statamic_analytics_aggregates')->insert([
                     'type'              => 'daily',
                     'date'              => $date,
                     'dimension'         => $dimension,
@@ -96,24 +97,24 @@ class ProcessAnalytics extends Command
         }
 
         // Agrégat _overview : résumé journalier sans groupement, survit à la purge des événements bruts
-        DB::table('statamic_analytics_aggregates')
+        AnalyticsDB::table('statamic_analytics_aggregates')
             ->where('type', 'daily')
             ->where('date', $date)
             ->where('dimension', '_overview')
             ->delete();
 
-        $overview = DB::table('statamic_analytics_page_views')
+        $overview = AnalyticsDB::table('statamic_analytics_page_views')
             ->where('visited_at', '>=', Carbon::parse($date)->startOfDay())
             ->where('visited_at', '<', Carbon::parse($date)->addDay()->startOfDay())
             ->selectRaw('
                 COUNT(*) as total_visits,
-                SUM(CASE WHEN is_new_visitor = 1 THEN 1 ELSE 0 END) as unique_visitors,
-                SUM(CASE WHEN is_new_page_visit = 1 THEN 1 ELSE 0 END) as unique_page_views,
-                SUM(CASE WHEN is_new_visitor = 0 THEN 1 ELSE 0 END) as returning_visitors
+                SUM(CASE WHEN is_new_visitor THEN 1 ELSE 0 END) as unique_visitors,
+                SUM(CASE WHEN is_new_page_visit THEN 1 ELSE 0 END) as unique_page_views,
+                SUM(CASE WHEN is_new_visitor THEN 0 ELSE 1 END) as returning_visitors
             ')
             ->first();
 
-        DB::table('statamic_analytics_aggregates')->insert([
+        AnalyticsDB::table('statamic_analytics_aggregates')->insert([
             'type'               => 'daily',
             'date'               => $date,
             'dimension'          => '_overview',

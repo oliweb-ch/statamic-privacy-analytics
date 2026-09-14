@@ -6,6 +6,11 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    public function getConnection()
+    {
+        return config('statamic-analytics.database_connection');
+    }
+
     public function up()
     {
         Schema::create('statamic_analytics_page_views', function (Blueprint $table) {
