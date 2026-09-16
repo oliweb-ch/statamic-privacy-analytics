@@ -9,10 +9,18 @@ class PageViewRecorder
 {
     public function record(array $data): void
     {
-        $ipAddress = $data['ip_address'] ?? '';
-        $geoData = (new GeolocationService())->lookup((string) $ipAddress);
+        $skipGeo = (bool) ($data['skip_geolocation'] ?? false);
+        $insertData = array_diff_key($data, ['skip_geolocation' => null]);
 
-        $inserted = AnalyticsDB::table('statamic_analytics_page_views')->insertOrIgnore(array_merge($data, [
+        $ipAddress = $insertData['ip_address'] ?? '';
+
+        if ($skipGeo) {
+            $geoData = ['country_code' => null, 'country_name' => null, 'city' => null];
+        } else {
+            $geoData = (new GeolocationService())->lookup((string) $ipAddress);
+        }
+
+        $inserted = AnalyticsDB::table('statamic_analytics_page_views')->insertOrIgnore(array_merge($insertData, [
             'country_code' => $geoData['country_code'],
             'country_name' => $geoData['country_name'],
             'city'         => $geoData['city'],

@@ -117,6 +117,9 @@ class TrackController extends Controller
             'visited_at'        => $now->format('Y-m-d H:i:s'),
             'created_at'        => $now,
             'updated_at'        => $now,
+            // Sérialisé dans le payload pour survivre au passage en queue async.
+            // false = geolocation refusée par l'utilisateur (settings.geolocation=false).
+            'skip_geolocation'  => session('analytics_settings.geolocation', true) === false,
         ];
 
         $queueConnection = config('statamic-analytics.tracking.queue_connection');
