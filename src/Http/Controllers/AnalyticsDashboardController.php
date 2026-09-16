@@ -139,10 +139,24 @@ class AnalyticsDashboardController
             ->where('is_new_visitor', true)
             ->count();
 
-        $bounceRate = AnalyticsDB::table('statamic_analytics_page_views')
+        // Bounce rate = sessions avec exactement 1 page vue / total sessions.
+        // is_new_page_visit ne convient pas : il compte toutes les nouvelles URLs
+        // d'une session, pas les sessions à page unique.
+        $totalSessions = AnalyticsDB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
-            ->where('is_new_page_visit', true)
-            ->count() / ($totalVisits ?: 1);
+            ->distinct('session_id')
+            ->count('session_id');
+
+        $bouncedSessions = AnalyticsDB::connection()->table(
+            AnalyticsDB::table('statamic_analytics_page_views')
+                ->select('session_id')
+                ->whereBetween('visited_at', [$startDate, $endDate])
+                ->groupBy('session_id')
+                ->havingRaw('COUNT(*) = 1'),
+            'bounced'
+        )->count();
+
+        $bounceRate = $totalSessions > 0 ? $bouncedSessions / $totalSessions : 0;
 
         return [
             'total_visits'    => $totalVisits,
