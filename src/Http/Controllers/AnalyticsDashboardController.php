@@ -570,11 +570,21 @@ class AnalyticsDashboardController
 
     protected function getUserFlow($startDate, $endDate)
     {
-        $entryPages = AnalyticsDB::table('statamic_analytics_page_views')
-            ->select('page_url', DB::raw('COUNT(*) as count'))
+        // Entry pages = première page de chaque session (MIN visited_at par session).
+        // is_new_page_visit ne suffit pas : il marque toutes les nouvelles URLs d'une
+        // session, pas seulement la toute première page visitée.
+        $firstVisitsSubquery = AnalyticsDB::table('statamic_analytics_page_views')
+            ->select('session_id', DB::raw('MIN(visited_at) as first_visited_at'))
             ->whereBetween('visited_at', [$startDate, $endDate])
-            ->where('is_new_page_visit', true)
-            ->groupBy('page_url')
+            ->groupBy('session_id');
+
+        $entryPages = AnalyticsDB::table('statamic_analytics_page_views as pv')
+            ->joinSub($firstVisitsSubquery, 'fv', function ($join) {
+                $join->on('pv.session_id', '=', 'fv.session_id')
+                     ->on('pv.visited_at', '=', 'fv.first_visited_at');
+            })
+            ->select('pv.page_url', DB::raw('COUNT(*) as count'))
+            ->groupBy('pv.page_url')
             ->orderByDesc('count')
             ->limit(5)
             ->get();
