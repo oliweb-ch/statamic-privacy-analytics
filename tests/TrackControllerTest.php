@@ -131,7 +131,55 @@ class TrackControllerTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
-    // 2. Filtrage IP
+    // 2. Consentement serveur (consent.enabled = true)
+    // -------------------------------------------------------------------------
+
+    #[Test]
+    public function test_consentement_requis_et_absent_retourne_204_sans_job(): void
+    {
+        Queue::fake();
+        $this->baseConfig(['statamic-analytics.tracking.consent.enabled' => true]);
+
+        // Aucune session → session('analytics_consent') = null → bloqué
+        $this->beacon($this->validParams())->assertNoContent();
+        Queue::assertNothingPushed();
+    }
+
+    #[Test]
+    public function test_consentement_requis_et_refuse_retourne_204_sans_job(): void
+    {
+        Queue::fake();
+        $this->baseConfig(['statamic-analytics.tracking.consent.enabled' => true]);
+
+        $this->withSession(['analytics_consent' => false])
+            ->beacon($this->validParams())->assertNoContent();
+        Queue::assertNothingPushed();
+    }
+
+    #[Test]
+    public function test_consentement_requis_et_accepte_dispatche_un_job(): void
+    {
+        Queue::fake();
+        $this->baseConfig(['statamic-analytics.tracking.consent.enabled' => true]);
+
+        $this->withSession(['analytics_consent' => true])
+            ->beacon($this->validParams())->assertNoContent();
+        Queue::assertPushed(TrackPageViewJob::class);
+    }
+
+    #[Test]
+    public function test_consentement_desactive_dispatche_sans_session(): void
+    {
+        Queue::fake();
+        $this->baseConfig(['statamic-analytics.tracking.consent.enabled' => false]);
+
+        // Pas de session du tout → pas de blocage si consent.enabled = false
+        $this->beacon($this->validParams())->assertNoContent();
+        Queue::assertPushed(TrackPageViewJob::class);
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. Filtrage IP
     // -------------------------------------------------------------------------
 
     #[Test]
