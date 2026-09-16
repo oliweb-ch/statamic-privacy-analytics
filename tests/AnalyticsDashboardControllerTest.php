@@ -347,4 +347,28 @@ class AnalyticsDashboardControllerTest extends TestCase
         $this->assertNull($entryPages->firstWhere('page_url', '/contact'));
         $this->assertNull($entryPages->firstWhere('page_url', '/faq'));
     }
+
+    #[Test]
+    public function test_entry_pages_timestamps_identiques_dans_la_meme_session(): void
+    {
+        // Deux pages arrivées dans la même seconde pour la même session.
+        // visited_at identique → MIN(visited_at) retournerait les deux lignes.
+        // MIN(id) doit retourner exactement 1 entry page par session (déterministe).
+        $t = $this->ts(10, 0, 0);
+
+        // Insérer /premier en premier (id plus petit) → doit être l'entry page
+        $this->insertPageView($t, ['session_id' => 'sess-col', 'page_url' => '/premier']);
+        $this->insertPageView($t, ['session_id' => 'sess-col', 'page_url' => '/second']); // même seconde
+
+        $data = $this->getData();
+        $entryPages = collect($data['user_flow']['entry_pages']);
+
+        // Exactement une entry page pour cette session
+        $sessionEntries = $entryPages->filter(fn ($p) => in_array($p['page_url'], ['/premier', '/second']));
+        $this->assertCount(1, $sessionEntries, 'Une seule entry page par session même si deux timestamps sont identiques.');
+
+        // C'est /premier qui doit être retenu (id plus petit = inséré en premier)
+        $this->assertNotNull($entryPages->firstWhere('page_url', '/premier'));
+        $this->assertNull($entryPages->firstWhere('page_url', '/second'));
+    }
 }

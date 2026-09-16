@@ -282,4 +282,73 @@ class TrackControllerTest extends TestCase
 
         Queue::assertPushed(TrackPageViewJob::class);
     }
+
+    // -------------------------------------------------------------------------
+    // 6. Propagation du flag skip_geolocation session → beacon → job
+    //
+    // Vérifie que la valeur de session analytics_settings.geolocation arrive
+    // correctement dans le payload du job, qui est ensuite sérialisé dans la
+    // queue et consommé par PageViewRecorder dans le worker.
+    // -------------------------------------------------------------------------
+
+    #[Test]
+    public function test_geolocation_false_en_session_produit_skip_true_dans_le_job(): void
+    {
+        Queue::fake();
+        $this->baseConfig([
+            'statamic-analytics.tracking.consent.enabled' => true,
+            'statamic-analytics.tracking.queue_connection' => 'sync',
+        ]);
+
+        $this->withSession([
+            'analytics_consent'   => true,
+            'analytics_settings'  => ['geolocation' => false],
+        ])->beacon($this->validParams())->assertNoContent();
+
+        Queue::assertPushed(TrackPageViewJob::class, function (TrackPageViewJob $job) {
+            // data est protected — accessible via closure binding PHP 8
+            $data = (fn () => $this->data)->call($job);
+            return $data['skip_geolocation'] === true;
+        });
+    }
+
+    #[Test]
+    public function test_geolocation_true_en_session_produit_skip_false_dans_le_job(): void
+    {
+        Queue::fake();
+        $this->baseConfig([
+            'statamic-analytics.tracking.consent.enabled' => true,
+            'statamic-analytics.tracking.queue_connection' => 'sync',
+        ]);
+
+        $this->withSession([
+            'analytics_consent'   => true,
+            'analytics_settings'  => ['geolocation' => true],
+        ])->beacon($this->validParams())->assertNoContent();
+
+        Queue::assertPushed(TrackPageViewJob::class, function (TrackPageViewJob $job) {
+            $data = (fn () => $this->data)->call($job);
+            return $data['skip_geolocation'] === false;
+        });
+    }
+
+    #[Test]
+    public function test_absence_de_settings_geolocation_produit_skip_false_par_defaut(): void
+    {
+        Queue::fake();
+        $this->baseConfig([
+            'statamic-analytics.tracking.consent.enabled' => true,
+            'statamic-analytics.tracking.queue_connection' => 'sync',
+        ]);
+
+        // Session sans analytics_settings → comportement par défaut (pas de skip)
+        $this->withSession([
+            'analytics_consent' => true,
+        ])->beacon($this->validParams())->assertNoContent();
+
+        Queue::assertPushed(TrackPageViewJob::class, function (TrackPageViewJob $job) {
+            $data = (fn () => $this->data)->call($job);
+            return $data['skip_geolocation'] === false;
+        });
+    }
 }

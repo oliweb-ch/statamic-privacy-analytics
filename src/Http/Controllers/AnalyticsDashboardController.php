@@ -570,18 +570,22 @@ class AnalyticsDashboardController
 
     protected function getUserFlow($startDate, $endDate)
     {
-        // Entry pages = première page de chaque session (MIN visited_at par session).
+        // Entry pages = première page de chaque session dans la période.
         // is_new_page_visit ne suffit pas : il marque toutes les nouvelles URLs d'une
         // session, pas seulement la toute première page visitée.
+        //
+        // Tie-breaker : MIN(id) plutôt que MIN(visited_at).
+        // visited_at est stocké à la seconde près — deux beacons reçus dans la même
+        // seconde auraient le même timestamp et le JOIN précédent retournerait plusieurs
+        // lignes par session. id (auto-increment) est unique et déterministe.
         $firstVisitsSubquery = AnalyticsDB::table('statamic_analytics_page_views')
-            ->select('session_id', DB::raw('MIN(visited_at) as first_visited_at'))
+            ->select('session_id', DB::raw('MIN(id) as first_id'))
             ->whereBetween('visited_at', [$startDate, $endDate])
             ->groupBy('session_id');
 
         $entryPages = AnalyticsDB::table('statamic_analytics_page_views as pv')
             ->joinSub($firstVisitsSubquery, 'fv', function ($join) {
-                $join->on('pv.session_id', '=', 'fv.session_id')
-                     ->on('pv.visited_at', '=', 'fv.first_visited_at');
+                $join->on('pv.id', '=', 'fv.first_id');
             })
             ->select('pv.page_url', DB::raw('COUNT(*) as count'))
             ->groupBy('pv.page_url')
