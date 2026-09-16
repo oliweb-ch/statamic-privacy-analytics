@@ -123,7 +123,14 @@ class HealthCheck extends Command
         try {
             $key = 'statamic-analytics:health-' . uniqid();
             Cache::put($key, 'ok', 10);
+            $read = Cache::get($key);
             Cache::forget($key);
+
+            if ($read !== 'ok') {
+                $this->printFail('Cache', 'La lecture du cache a échoué — le cache est peut-être mal configuré');
+                return;
+            }
+
             $this->printOk('Cache', '(' . config('cache.default') . ')');
         } catch (\Exception $e) {
             $this->printFail('Cache', $e->getMessage());
