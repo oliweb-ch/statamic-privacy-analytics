@@ -108,7 +108,7 @@ var url=window.location.pathname;
 var vp=[];try{vp=JSON.parse(sessionStorage.getItem('_anl_vp')||'[]');}catch(e){}
 var np=vp.indexOf(url)===-1;
 if(np){vp=vp.slice(-19);vp.push(url);sessionStorage.setItem('_anl_vp',JSON.stringify(vp));}
-var now=new Date(),today=now.toISOString().slice(0,10),hour=today+' '+('0'+now.getHours()).slice(-2);
+var now=new Date(),y=now.getFullYear(),mo=('0'+(now.getMonth()+1)).slice(-2),da=('0'+now.getDate()).slice(-2),today=y+'-'+mo+'-'+da,hour=today+' '+('0'+now.getHours()).slice(-2);
 var ld=localStorage.getItem('_anl_ld'),lh=localStorage.getItem('_anl_lh');
 var p=new URLSearchParams({page_url:url,referrer_url:document.referrer||'',visitor_id:vid,session_id:sid,n:isNew?'1':'0',nd:ld!==today?'1':'0',nh:lh!==hour?'1':'0',np:np?'1':'0'});
 new Image().src=ep+'?'+p.toString();
