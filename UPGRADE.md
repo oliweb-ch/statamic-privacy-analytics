@@ -1,5 +1,104 @@
 # Upgrade Guide
 
+## Upgrading to 4.9
+
+### No breaking changes
+
+v4.9 is fully backward-compatible. No migrations, no config changes required.
+
+### Privacy fixes
+
+#### Server-side consent enforcement (full static mode)
+
+Previously, when `tracking.consent.enabled` was `true`, consent was enforced only by the JS tracker. A direct call to `GET /statamic-analytics/track` bypassed the check entirely.
+
+The beacon endpoint now verifies `session('analytics_consent')` server-side. A beacon is silently dropped (HTTP 204) if the visitor has not consented.
+
+**What this means in practice:** The beacon endpoint now participates in the site's Laravel session when `consent.enabled` is active. The consent choice recorded by `POST /statamic-analytics/consent` is read on each beacon request. No additional cookie is set — the site's existing session cookie is used.
+
+No action required if your installation uses `consent.enabled: false` (the default) — the endpoint remains stateless.
+
+#### Granular geolocation opt-out now enforced server-side
+
+The `geolocation` toggle in the consent banner UI was stored in the session but never read by the server. IP geolocation was performed regardless of the visitor's choice.
+
+From v4.9, when a visitor declines geolocation, `GeolocationService::lookup()` is not called and `country_code`, `country_name`, `city` are stored as `NULL`. This applies to both the synchronous path and the async queue path (the flag is serialised in the job payload).
+
+### Analytics metric corrections
+
+#### Bounce rate
+
+The previous bounce rate calculation was incorrect — it measured the ratio of new page URLs seen per session, not the proportion of single-page sessions.
+
+The corrected formula:
+
+```
+bounce rate = sessions with exactly 1 page view / total sessions
+```
+
+**Your historical dashboard data will show different values from v4.9 onward.** The new figures are analytically meaningful; the previous ones were not.
+
+#### Entry pages
+
+Entry pages previously counted all URLs where `is_new_page_visit=true` within a session — this includes every new URL seen in a session, not just the first page visited.
+
+Entry pages now uses `MIN(id)` per session to identify the single first page view, joined back to retrieve the URL. Concurrent beacons received in the same second are resolved deterministically by insertion order.
+
+**Your historical entry pages data will show different (more accurate) values from v4.9 onward.**
+
+### Other fixes
+
+- **JS tracker date consistency** — The inline tracker script used `toISOString()` (UTC date) combined with `getHours()` (local time) for day/hour tracking, causing incorrect new-day detection around midnight in non-UTC timezones. Both now use local time, consistent with `tracker.js`.
+- **`analytics:health` cache check** — The cache diagnostic now performs a full read/write/delete cycle and fails if the read returns an unexpected value.
+
+### Composer constraint
+
+```bash
+composer require oliweb/statamic-privacy-analytics:^4.9
+```
+
+---
+
+## Upgrading to 4.8
+
+### No breaking changes
+
+v4.8 is fully backward-compatible.
+
+### New: dedicated database connection
+
+Analytics tables can now live on a separate database connection, independently of your application's default connection.
+
+```
+# .env
+ANALYTICS_DB_CONNECTION=analytics   # any connection defined in config/database.php
+                                    # omit or set to null to keep the app default
+```
+
+All analytics queries, migrations, and the `analytics:health` command respect this setting. Useful when analytics data must be isolated (separate host, separate credentials, shared analytics DB across environments).
+
+If you publish the config, the new key is:
+
+```php
+'database_connection' => env('ANALYTICS_DB_CONNECTION', null),
+```
+
+```bash
+php artisan vendor:publish --tag=statamic-analytics-config --force
+```
+
+### PostgreSQL 16 officially supported
+
+PostgreSQL 16 is now included in the CI test matrix alongside SQLite, MySQL 8, and MariaDB 11. Time-based expressions in the heatmap and session calculations use driver-specific SQL (`EXTRACT` for PostgreSQL, `HOUR`/`DAYOFWEEK` for MySQL/MariaDB, `strftime` for SQLite).
+
+### Composer constraint
+
+```bash
+composer require oliweb/statamic-privacy-analytics:^4.8
+```
+
+---
+
 ## Upgrading to 4.7
 
 ### No breaking changes

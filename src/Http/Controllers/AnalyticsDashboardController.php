@@ -139,10 +139,24 @@ class AnalyticsDashboardController
             ->where('is_new_visitor', true)
             ->count();
 
-        $bounceRate = AnalyticsDB::table('statamic_analytics_page_views')
+        // Bounce rate = sessions avec exactement 1 page vue / total sessions.
+        // is_new_page_visit ne convient pas : il compte toutes les nouvelles URLs
+        // d'une session, pas les sessions à page unique.
+        $totalSessions = AnalyticsDB::table('statamic_analytics_page_views')
             ->whereBetween('visited_at', [$startDate, $endDate])
-            ->where('is_new_page_visit', true)
-            ->count() / ($totalVisits ?: 1);
+            ->distinct('session_id')
+            ->count('session_id');
+
+        $bouncedSessions = AnalyticsDB::connection()->table(
+            AnalyticsDB::table('statamic_analytics_page_views')
+                ->select('session_id')
+                ->whereBetween('visited_at', [$startDate, $endDate])
+                ->groupBy('session_id')
+                ->havingRaw('COUNT(*) = 1'),
+            'bounced'
+        )->count();
+
+        $bounceRate = $totalSessions > 0 ? $bouncedSessions / $totalSessions : 0;
 
         return [
             'total_visits'    => $totalVisits,
@@ -556,11 +570,25 @@ class AnalyticsDashboardController
 
     protected function getUserFlow($startDate, $endDate)
     {
-        $entryPages = AnalyticsDB::table('statamic_analytics_page_views')
-            ->select('page_url', DB::raw('COUNT(*) as count'))
+        // Entry pages = première page de chaque session dans la période.
+        // is_new_page_visit ne suffit pas : il marque toutes les nouvelles URLs d'une
+        // session, pas seulement la toute première page visitée.
+        //
+        // Tie-breaker : MIN(id) plutôt que MIN(visited_at).
+        // visited_at est stocké à la seconde près — deux beacons reçus dans la même
+        // seconde auraient le même timestamp et le JOIN précédent retournerait plusieurs
+        // lignes par session. id (auto-increment) est unique et déterministe.
+        $firstVisitsSubquery = AnalyticsDB::table('statamic_analytics_page_views')
+            ->select('session_id', DB::raw('MIN(id) as first_id'))
             ->whereBetween('visited_at', [$startDate, $endDate])
-            ->where('is_new_page_visit', true)
-            ->groupBy('page_url')
+            ->groupBy('session_id');
+
+        $entryPages = AnalyticsDB::table('statamic_analytics_page_views as pv')
+            ->joinSub($firstVisitsSubquery, 'fv', function ($join) {
+                $join->on('pv.id', '=', 'fv.first_id');
+            })
+            ->select('pv.page_url', DB::raw('COUNT(*) as count'))
+            ->groupBy('pv.page_url')
             ->orderByDesc('count')
             ->limit(5)
             ->get();

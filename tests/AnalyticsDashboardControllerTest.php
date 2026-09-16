@@ -260,4 +260,115 @@ class AnalyticsDashboardControllerTest extends TestCase
       );
   }
 
+    // -------------------------------------------------------------------------
+    // 8. Bounce rate — sessions mono-page / total sessions
+    // -------------------------------------------------------------------------
+
+    #[Test]
+    public function test_bounce_rate_sessions_mono_page(): void
+    {
+        // Session A : 1 page → bounce
+        $this->insertPageView($this->ts(10), ['session_id' => 'sess-a', 'page_url' => '/a']);
+
+        // Session B : 2 pages → pas un bounce
+        $this->insertPageView($this->ts(11), ['session_id' => 'sess-b', 'page_url' => '/b1']);
+        $this->insertPageView($this->ts(11, 5), ['session_id' => 'sess-b', 'page_url' => '/b2']);
+
+        // Session C : 3 pages → pas un bounce
+        $this->insertPageView($this->ts(12), ['session_id' => 'sess-c', 'page_url' => '/c1']);
+        $this->insertPageView($this->ts(12, 2), ['session_id' => 'sess-c', 'page_url' => '/c2']);
+        $this->insertPageView($this->ts(12, 5), ['session_id' => 'sess-c', 'page_url' => '/c3']);
+
+        $data = $this->getData();
+
+        // 1 session bounced / 3 sessions total = 0.333...
+        $this->assertEqualsWithDelta(1 / 3, $data['overview']['bounce_rate'], 0.001);
+    }
+
+    #[Test]
+    public function test_bounce_rate_toutes_les_sessions_mono_page(): void
+    {
+        $this->insertPageView($this->ts(10), ['session_id' => 'sess-x', 'page_url' => '/x']);
+        $this->insertPageView($this->ts(11), ['session_id' => 'sess-y', 'page_url' => '/y']);
+
+        $data = $this->getData();
+
+        $this->assertEqualsWithDelta(1.0, $data['overview']['bounce_rate'], 0.001);
+    }
+
+    #[Test]
+    public function test_bounce_rate_aucune_session_mono_page(): void
+    {
+        // Deux sessions avec 2 pages chacune → bounce = 0
+        $this->insertPageView($this->ts(10), ['session_id' => 'sess-1', 'page_url' => '/p1']);
+        $this->insertPageView($this->ts(10, 5), ['session_id' => 'sess-1', 'page_url' => '/p2']);
+        $this->insertPageView($this->ts(11), ['session_id' => 'sess-2', 'page_url' => '/p3']);
+        $this->insertPageView($this->ts(11, 3), ['session_id' => 'sess-2', 'page_url' => '/p4']);
+
+        $data = $this->getData();
+
+        $this->assertEqualsWithDelta(0.0, $data['overview']['bounce_rate'], 0.001);
+    }
+
+    // -------------------------------------------------------------------------
+    // 9. Entry pages — première page de chaque session (MIN visited_at)
+    // -------------------------------------------------------------------------
+
+    #[Test]
+    public function test_entry_pages_premiere_page_de_session(): void
+    {
+        // Session A : /accueil → /produit
+        $this->insertPageView($this->ts(10, 0), ['session_id' => 'sess-a', 'page_url' => '/accueil', 'is_new_page_visit' => true]);
+        $this->insertPageView($this->ts(10, 2), ['session_id' => 'sess-a', 'page_url' => '/produit', 'is_new_page_visit' => true]);
+
+        // Session B : /blog → /contact
+        $this->insertPageView($this->ts(11, 0), ['session_id' => 'sess-b', 'page_url' => '/blog', 'is_new_page_visit' => true]);
+        $this->insertPageView($this->ts(11, 3), ['session_id' => 'sess-b', 'page_url' => '/contact', 'is_new_page_visit' => true]);
+
+        // Session C : /accueil → /faq
+        $this->insertPageView($this->ts(12, 0), ['session_id' => 'sess-c', 'page_url' => '/accueil', 'is_new_page_visit' => true]);
+        $this->insertPageView($this->ts(12, 1), ['session_id' => 'sess-c', 'page_url' => '/faq', 'is_new_page_visit' => true]);
+
+        $data = $this->getData();
+        $entryPages = collect($data['user_flow']['entry_pages']);
+
+        // /accueil doit être la page d'entrée de 2 sessions
+        $accueil = $entryPages->firstWhere('page_url', '/accueil');
+        $this->assertNotNull($accueil, '/accueil doit apparaître dans entry_pages.');
+        $this->assertSame(2, (int) $accueil['count']);
+
+        // /blog doit être la page d'entrée de 1 session
+        $blog = $entryPages->firstWhere('page_url', '/blog');
+        $this->assertNotNull($blog, '/blog doit apparaître dans entry_pages.');
+        $this->assertSame(1, (int) $blog['count']);
+
+        // /produit, /contact, /faq ne doivent PAS être des entry pages
+        $this->assertNull($entryPages->firstWhere('page_url', '/produit'));
+        $this->assertNull($entryPages->firstWhere('page_url', '/contact'));
+        $this->assertNull($entryPages->firstWhere('page_url', '/faq'));
+    }
+
+    #[Test]
+    public function test_entry_pages_timestamps_identiques_dans_la_meme_session(): void
+    {
+        // Deux pages arrivées dans la même seconde pour la même session.
+        // visited_at identique → MIN(visited_at) retournerait les deux lignes.
+        // MIN(id) doit retourner exactement 1 entry page par session (déterministe).
+        $t = $this->ts(10, 0, 0);
+
+        // Insérer /premier en premier (id plus petit) → doit être l'entry page
+        $this->insertPageView($t, ['session_id' => 'sess-col', 'page_url' => '/premier']);
+        $this->insertPageView($t, ['session_id' => 'sess-col', 'page_url' => '/second']); // même seconde
+
+        $data = $this->getData();
+        $entryPages = collect($data['user_flow']['entry_pages']);
+
+        // Exactement une entry page pour cette session
+        $sessionEntries = $entryPages->filter(fn ($p) => in_array($p['page_url'], ['/premier', '/second']));
+        $this->assertCount(1, $sessionEntries, 'Une seule entry page par session même si deux timestamps sont identiques.');
+
+        // C'est /premier qui doit être retenu (id plus petit = inséré en premier)
+        $this->assertNotNull($entryPages->firstWhere('page_url', '/premier'));
+        $this->assertNull($entryPages->firstWhere('page_url', '/second'));
+    }
 }

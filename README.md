@@ -179,7 +179,8 @@ return [
     ],
 
     'privacy' => [
-        'ip_retention_days' => env('ANALYTICS_IP_RETENTION_DAYS', 90), // null = unlimited (not recommended)
+        'ip_retention_days'  => env('ANALYTICS_IP_RETENTION_DAYS', 90),   // null = unlimited (not recommended)
+        'raw_retention_days' => env('ANALYTICS_RAW_RETENTION_DAYS', 180), // null = keep raw events forever
     ],
 
     'database_connection' => env('ANALYTICS_DB_CONNECTION', null),
@@ -191,6 +192,8 @@ return [
 ### Configuration notes
 
 **`privacy.ip_retention_days`** — Number of days `ip_address`, `user_agent`, and `user_id` are kept before anonymisation. `null` disables automatic anonymisation — not recommended, and unlimited retention may be difficult to justify depending on the requirements applicable to your deployment. See [IP retention](#ip-retention).
+
+**`privacy.raw_retention_days`** — Number of days raw page view events are kept before permanent deletion. After this period, `analytics:purge-raw-events` removes individual records; aggregates are not affected and survive the purge. `null` keeps raw events indefinitely. Default: 180 days.
 
 **`database_connection`** — The Laravel database connection used for all `statamic_analytics_*` tables and migrations. `null` (default) follows the application's default connection — no behavior change for existing installs. Set this when analytics data must live on a specific connection regardless of the app default (e.g. a shared analytics database consistent across environments):
 
@@ -285,6 +288,8 @@ When the tag renders a script, the beacon fires after page load and sends a `GET
 | Last visit date / hour | `localStorage` | Used for `is_new_day_visit` / `is_new_hour_visit` |
 
 **Consent:** If `tracking.consent.enabled` is `true`, the JS tracker reads `analytics_consent` from `localStorage` (the same key written by the consent banner) and silently aborts if consent has not been given. No identifier is created and no beacon is sent before consent.
+
+**Server-side consent enforcement in `strategy=full` mode:** When `tracking.consent.enabled` is `true`, the beacon endpoint (`GET /statamic-analytics/track`) also verifies consent on the server by reading the site's existing Laravel session. This means that even a direct call to the beacon URL bypassing the JS tracker is blocked if the visitor has not consented. The consent choice is stored in the session when the visitor interacts with the consent banner (`POST /statamic-analytics/consent`). As a consequence, the site's **Laravel session cookie** is read on each beacon request when consent is active — no additional analytics-specific cookie is set, but the session cookie that your application already uses is involved.
 
 **Privacy note — persistent localStorage identifier:** In `strategy=full` mode, the tracker writes `_anl_vid` to `localStorage`. Unlike the standard mode (where `visitor_id` lives in the Laravel session and is cleared when the session expires), this identifier **persists across browser sessions** and carries no expiry. It is a first-party identifier stored in the visitor's browser and transmitted only as part of the beacon sent to your own server — no analytics cookies are set. This is an architectural consequence of full static caching (PHP session is unavailable). Mention it in your privacy policy if your legal context requires it.
 

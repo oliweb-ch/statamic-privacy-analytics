@@ -31,6 +31,15 @@ class TrackController extends Controller
      */
     public function track(Request $request)
     {
+        // Guard consentement — miroir de TrackPageVisit::shouldTrack().
+        // En mode full static, la session est créée lors du POST /consent.
+        // Le cookie de session est envoyé automatiquement avec le beacon GET.
+        if (config('statamic-analytics.tracking.consent.enabled', false)) {
+            if (session('analytics_consent') !== true) {
+                return response()->noContent(); // 204 silencieux
+            }
+        }
+
         try {
             $data = $request->validate([
                 // page_url acceptée en fallback uniquement — voir dérivation ci-dessous
@@ -108,6 +117,9 @@ class TrackController extends Controller
             'visited_at'        => $now->format('Y-m-d H:i:s'),
             'created_at'        => $now,
             'updated_at'        => $now,
+            // Sérialisé dans le payload pour survivre au passage en queue async.
+            // false = geolocation refusée par l'utilisateur (settings.geolocation=false).
+            'skip_geolocation'  => session('analytics_settings.geolocation', true) === false,
         ];
 
         $queueConnection = config('statamic-analytics.tracking.queue_connection');

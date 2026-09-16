@@ -104,6 +104,7 @@ class TrackPageVisit
                     'visited_at'        => $now->format('Y-m-d H:i:s'),
                     'created_at'        => $now,
                     'updated_at'        => $now,
+                    'skip_geolocation'  => $request->session()->get('analytics_settings.geolocation', true) === false,
                 ];
 
                 $queueConnection = config('statamic-analytics.tracking.queue_connection');
