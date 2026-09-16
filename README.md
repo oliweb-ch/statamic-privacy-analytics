@@ -179,7 +179,8 @@ return [
     ],
 
     'privacy' => [
-        'ip_retention_days' => env('ANALYTICS_IP_RETENTION_DAYS', 90), // null = unlimited (not recommended)
+        'ip_retention_days'  => env('ANALYTICS_IP_RETENTION_DAYS', 90),   // null = unlimited (not recommended)
+        'raw_retention_days' => env('ANALYTICS_RAW_RETENTION_DAYS', 180), // null = keep raw events forever
     ],
 
     'database_connection' => env('ANALYTICS_DB_CONNECTION', null),
@@ -191,6 +192,8 @@ return [
 ### Configuration notes
 
 **`privacy.ip_retention_days`** — Number of days `ip_address`, `user_agent`, and `user_id` are kept before anonymisation. `null` disables automatic anonymisation — not recommended, and unlimited retention may be difficult to justify depending on the requirements applicable to your deployment. See [IP retention](#ip-retention).
+
+**`privacy.raw_retention_days`** — Number of days raw page view events are kept before permanent deletion. After this period, `analytics:purge-raw-events` removes individual records; aggregates are not affected and survive the purge. `null` keeps raw events indefinitely. Default: 180 days.
 
 **`database_connection`** — The Laravel database connection used for all `statamic_analytics_*` tables and migrations. `null` (default) follows the application's default connection — no behavior change for existing installs. Set this when analytics data must live on a specific connection regardless of the app default (e.g. a shared analytics database consistent across environments):
 
