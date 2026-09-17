@@ -74,11 +74,11 @@ class ConsentBanner extends Tags
      * Rend un script de tracking JS uniquement si STATAMIC_STATIC_CACHING_STRATEGY=full.
      * Dans tous les autres cas, le middleware TrackPageVisit gère le tracking côté serveur.
      *
-     * Le bundle IIFE est compilé par Vite depuis resources/js/tracker-bundle.js
-     * (source unique : resources/js/tracker.js) et lu ici via file_get_contents.
-     * La config PHP (cr, ep) est transmise au bundle via window.__anl.
+     * Le bundle IIFE (resources/dist/tracker.js) est versionné dans le package et livré
+     * via Composer — les utilisateurs de l'addon n'ont pas à lancer npm.
      *
-     * Prérequis : exécuter `npm run build` avant de déployer.
+     * Pour les mainteneurs du package : après toute modification de resources/js/tracker.js,
+     * exécuter `npm run build` et committer resources/dist/tracker.js avant la release.
      */
     public function tracker(): string
     {
@@ -97,6 +97,10 @@ class ConsentBanner extends Tags
             'ep' => '/statamic-analytics/track',
         ], JSON_UNESCAPED_SLASHES);
         $script = file_get_contents($bundlePath);
+        if ($script === false) {
+            Log::warning('statamic-analytics: impossible de lire le bundle tracker (' . $bundlePath . ').');
+            return '';
+        }
 
         return <<<HTML
 <script>window.__anl={$config};</script>
