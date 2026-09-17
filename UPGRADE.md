@@ -1,5 +1,29 @@
 # Upgrade Guide
 
+## Upgrading to 4.10
+
+### No breaking changes
+
+v4.10 is fully backward-compatible. No migrations, no config changes, no action required for standard installations.
+
+### Tracker JS — Vite pipeline unified (internal)
+
+The JS beacon injected by `{{ statamic_analytics:tracker }}` is now compiled from a single source (`resources/js/tracker.js`) via the Vite/Rollup pipeline. The PHP heredoc that previously duplicated the tracker logic has been removed.
+
+**For addon users (Composer install):** the compiled bundle (`resources/dist/tracker.js`) is shipped with the package. No build step required. The tracker behavior is identical.
+
+**For installations that publish or override `ConsentBanner`:** if you have a local copy of `src/Tags/ConsentBanner.php` with the previous heredoc implementation, the `tracker()` method must be updated to read the bundle via `file_get_contents`. Refer to the published source for the new implementation.
+
+**For maintainers forking this addon:** run `npm run build` after any modification to `resources/js/tracker.js`, then commit `resources/dist/tracker.js` before tagging a release.
+
+### Composer constraint
+
+```bash
+composer require oliweb/statamic-privacy-analytics:^4.10
+```
+
+---
+
 ## Upgrading to 4.9
 
 ### No breaking changes
