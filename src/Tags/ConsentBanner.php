@@ -74,11 +74,11 @@ class ConsentBanner extends Tags
      * Rend un script de tracking JS uniquement si STATAMIC_STATIC_CACHING_STRATEGY=full.
      * Dans tous les autres cas, le middleware TrackPageVisit gère le tracking côté serveur.
      *
-     * ⚠ SYNCHRONISATION : ce script inline est la version de production de
-     * resources/js/tracker.js (lisible, commenté, couvert par Vitest).
-     * Toute modification de la logique ici doit être répercutée dans tracker.js,
-     * et vice-versa — les tests Vitest servent de spec exécutable.
-     * Clés de stockage partagées : _anl_vid, _anl_sid, _anl_vp, _anl_ld, _anl_lh
+     * Le bundle IIFE est compilé par Vite depuis resources/js/tracker-bundle.js
+     * (source unique : resources/js/tracker.js) et lu ici via file_get_contents.
+     * La config PHP (cr, ep) est transmise au bundle via window.__anl.
+     *
+     * Prérequis : exécuter `npm run build` avant de déployer.
      */
     public function tracker(): string
     {
@@ -86,36 +86,21 @@ class ConsentBanner extends Tags
             return '';
         }
 
-        $consentRequired = config('statamic-analytics.tracking.consent.enabled', false) ? 'true' : 'false';
-        $endpoint        = '/statamic-analytics/track';
+        $bundlePath = __DIR__ . '/../../resources/dist/tracker.js';
+        if (!file_exists($bundlePath)) {
+            Log::warning('statamic-analytics: bundle tracker absent (' . $bundlePath . '). Lancer : npm run build');
+            return '';
+        }
+
+        $config = json_encode([
+            'cr' => (bool) config('statamic-analytics.tracking.consent.enabled', false),
+            'ep' => '/statamic-analytics/track',
+        ], JSON_UNESCAPED_SLASHES);
+        $script = file_get_contents($bundlePath);
 
         return <<<HTML
-<script>
-(function(){
-var cr={$consentRequired},ep='{$endpoint}';
-if(cr&&localStorage.getItem('analytics_consent')!=='accepted')return;
-var vid=localStorage.getItem('_anl_vid'),isNew=!vid;
-if(isNew){
-  vid=(typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return(c==='x'?r:(r&0x3|0x8)).toString(16);});
-  localStorage.setItem('_anl_vid',vid);
-}
-var sid=sessionStorage.getItem('_anl_sid');
-if(!sid){
-  sid=(typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return(c==='x'?r:(r&0x3|0x8)).toString(16);});
-  sessionStorage.setItem('_anl_sid',sid);
-}
-var url=window.location.pathname;
-var vp=[];try{vp=JSON.parse(sessionStorage.getItem('_anl_vp')||'[]');}catch(e){}
-var np=vp.indexOf(url)===-1;
-if(np){vp=vp.slice(-19);vp.push(url);sessionStorage.setItem('_anl_vp',JSON.stringify(vp));}
-var now=new Date(),y=now.getFullYear(),mo=('0'+(now.getMonth()+1)).slice(-2),da=('0'+now.getDate()).slice(-2),today=y+'-'+mo+'-'+da,hour=today+' '+('0'+now.getHours()).slice(-2);
-var ld=localStorage.getItem('_anl_ld'),lh=localStorage.getItem('_anl_lh');
-var p=new URLSearchParams({page_url:url,referrer_url:document.referrer||'',visitor_id:vid,session_id:sid,n:isNew?'1':'0',nd:ld!==today?'1':'0',nh:lh!==hour?'1':'0',np:np?'1':'0'});
-new Image().src=ep+'?'+p.toString();
-localStorage.setItem('_anl_ld',today);
-localStorage.setItem('_anl_lh',hour);
-})();
-</script>
+<script>window.__anl={$config};</script>
+<script>{$script}</script>
 HTML;
     }
 
