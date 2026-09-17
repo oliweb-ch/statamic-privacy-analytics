@@ -2,100 +2,128 @@
 
 namespace Oliweb\StatamicAnalytics\Tests;
 
+use Oliweb\StatamicAnalytics\Tags\ConsentBanner;
 use PHPUnit\Framework\Attributes\Test;
 
 /**
- * Garde-fous de synchronisation entre le script inline de ConsentBanner::tracker()
- * et la spec exécutable resources/js/tracker.js.
+ * Tests de ConsentBanner::tracker() après unification Vite.
  *
- * Ces tests vérifient les invariants comportementaux importants du script inline
- * sans dépendance vers Statamic Tags ni environnement JS.
+ * Le bundle IIFE (resources/dist/tracker.js) est créé temporairement dans setUp/tearDown
+ * pour les tests qui nécessitent un fichier existant. Les tests de "bundle absent"
+ * s'appuient sur l'absence de ce fichier en environnement de test (pas de `npm run build`).
  *
- * Référence de synchronisation : tracker.js contient les fonctions de référence
- * (todayString, currentHourString) couvertes par Vitest. Le script inline doit
- * implémenter la même logique.
+ * Couverture :
+ *   1. Stratégie non-full → chaîne vide (middleware gère le tracking)
+ *   2. Bundle absent → chaîne vide + log warning (build manquant)
+ *   3. Injection de window.__anl avec les bonnes valeurs de config
+ *   4. Contenu du bundle injecté verbatim dans la sortie
  */
 class ConsentBannerTrackerTest extends TestCase
 {
-    private function trackerSource(): string
+    private string $bundlePath;
+
+    protected function setUp(): void
     {
-        return file_get_contents(__DIR__ . '/../src/Tags/ConsentBanner.php');
-    }
+        parent::setUp();
+        $this->bundlePath = __DIR__ . '/../resources/dist/tracker.js';
 
-    // ── Date/heure ─────────────────────────────────────────────────────────────
-
-    #[Test]
-    public function test_script_inline_utilise_date_locale_et_non_utc(): void
-    {
-        // toISOString() retourne une date UTC (ex: "2024-01-15T22:30:00.000Z").
-        // À 00:30 en Europe, la date UTC peut être le jour précédent.
-        // Le script doit utiliser getFullYear/getMonth/getDate (temps local).
-        $this->assertStringNotContainsString(
-            'toISOString',
-            $this->trackerSource(),
-            'Le script inline ne doit pas utiliser toISOString() — retourne une date UTC, ' .
-            'incohérente avec l\'heure locale utilisée pour la clé lh.'
-        );
-    }
-
-    #[Test]
-    public function test_script_inline_utilise_getfull_year_pour_date_locale(): void
-    {
-        $this->assertStringContainsString(
-            'getFullYear',
-            $this->trackerSource(),
-            'Le script inline doit utiliser getFullYear() pour calculer la date locale, ' .
-            'comme tracker.js::todayString().'
-        );
-    }
-
-    // ── Clés de stockage ───────────────────────────────────────────────────────
-
-    #[Test]
-    public function test_cles_de_stockage_presentes_dans_script_inline(): void
-    {
-        $source = $this->trackerSource();
-
-        // Ces clés doivent être identiques dans tracker.js et le script inline
-        // pour assurer la continuité de session lors d'un rechargement.
-        foreach (['_anl_vid', '_anl_sid', '_anl_vp', '_anl_ld', '_anl_lh', 'analytics_consent'] as $key) {
-            $this->assertStringContainsString(
-                $key,
-                $source,
-                "La clé de stockage '{$key}' doit être présente dans le script inline."
-            );
+        if (!is_dir(dirname($this->bundlePath))) {
+            mkdir(dirname($this->bundlePath), 0755, true);
         }
     }
 
-    // ── Consentement ───────────────────────────────────────────────────────────
-
-    #[Test]
-    public function test_script_inline_verifie_le_consentement_localStorage(): void
+    protected function tearDown(): void
     {
-        $this->assertStringContainsString(
-            'analytics_consent',
-            $this->trackerSource(),
-            'Le script inline doit vérifier analytics_consent dans localStorage.'
-        );
-        $this->assertStringContainsString(
-            'accepted',
-            $this->trackerSource(),
-            'Le script inline doit comparer la valeur à "accepted".'
-        );
+        if (file_exists($this->bundlePath)) {
+            unlink($this->bundlePath);
+        }
+        parent::tearDown();
     }
 
-    // ── visited_pages cap ─────────────────────────────────────────────────────
+    private function withBundle(string $content = '(function(){/* stub */})();'): void
+    {
+        file_put_contents($this->bundlePath, $content);
+    }
+
+    private function tracker(): string
+    {
+        return (new ConsentBanner())->tracker();
+    }
+
+    // ── 1. Stratégie non-full ─────────────────────────────────────────────────
 
     #[Test]
-    public function test_script_inline_cap_visited_pages_a_20(): void
+    public function test_tracker_retourne_vide_quand_strategie_non_full(): void
     {
-        // tracker.js::recordVisit() utilise slice(-19) puis push → max 20 entrées.
-        // Le script inline doit appliquer la même limite pour éviter la divergence.
-        $this->assertStringContainsString(
-            'slice(-19)',
-            $this->trackerSource(),
-            'Le cap de visited_pages doit être slice(-19) pour conserver max 20 entrées, ' .
-            'comme dans tracker.js::recordVisit().'
-        );
+        config(['statamic.static_caching.strategy' => null]);
+        $this->assertSame('', $this->tracker());
+    }
+
+    #[Test]
+    public function test_tracker_retourne_vide_quand_strategie_half(): void
+    {
+        config(['statamic.static_caching.strategy' => 'half']);
+        $this->assertSame('', $this->tracker());
+    }
+
+    // ── 2. Bundle absent ──────────────────────────────────────────────────────
+
+    #[Test]
+    public function test_tracker_retourne_vide_quand_bundle_absent(): void
+    {
+        config(['statamic.static_caching.strategy' => 'full']);
+        // Pas de withBundle() → le fichier n'existe pas
+        $this->assertSame('', $this->tracker());
+    }
+
+    // ── 3. Injection de window.__anl ─────────────────────────────────────────
+
+    #[Test]
+    public function test_tracker_injecte_cr_false_quand_consent_desactive(): void
+    {
+        config([
+            'statamic.static_caching.strategy'                => 'full',
+            'statamic-analytics.tracking.consent.enabled'     => false,
+        ]);
+        $this->withBundle();
+
+        $output = $this->tracker();
+
+        $this->assertStringContainsString('window.__anl', $output);
+        $this->assertStringContainsString('"cr":false', $output);
+    }
+
+    #[Test]
+    public function test_tracker_injecte_cr_true_quand_consent_active(): void
+    {
+        config([
+            'statamic.static_caching.strategy'                => 'full',
+            'statamic-analytics.tracking.consent.enabled'     => true,
+        ]);
+        $this->withBundle();
+
+        $output = $this->tracker();
+
+        $this->assertStringContainsString('"cr":true', $output);
+    }
+
+    #[Test]
+    public function test_tracker_injecte_endpoint_par_defaut(): void
+    {
+        config(['statamic.static_caching.strategy' => 'full']);
+        $this->withBundle();
+
+        $this->assertStringContainsString('/statamic-analytics/track', $this->tracker());
+    }
+
+    // ── 4. Contenu du bundle ──────────────────────────────────────────────────
+
+    #[Test]
+    public function test_tracker_injecte_contenu_du_bundle_verbatim(): void
+    {
+        config(['statamic.static_caching.strategy' => 'full']);
+        $this->withBundle('(function(){console.log("tracker-stub");})();');
+
+        $this->assertStringContainsString('console.log("tracker-stub")', $this->tracker());
     }
 }

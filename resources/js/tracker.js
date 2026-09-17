@@ -1,19 +1,12 @@
 /**
  * Beacon tracker — mode static caching full de Statamic.
  *
- * Spec exécutable et version lisible du script inline de ConsentBanner::tracker()
- * (src/Tags/ConsentBanner.php). Toutes les fonctions sont exportées pour les tests Vitest.
+ * Source unique du tracker. Toutes les fonctions sont exportées pour les tests Vitest.
+ * Le pipeline Vite compile tracker-bundle.js (qui importe init()) en IIFE dans
+ * resources/dist/tracker.js. ConsentBanner::tracker() injecte ce bundle inline
+ * avec la config PHP via window.__anl = { cr, ep }.
  *
- * ⚠ SYNCHRONISATION : toute modification de la logique ici doit être répercutée
- * dans le script inline de ConsentBanner::tracker(), et vice-versa.
- *
- * Clés de stockage : identiques au script inline pour permettre une migration
- * transparente sans perte de session visiteur.
- *
- * Différences intentionnelles vs le script inline :
- *   - Date/heure en temps LOCAL (le script inline utilise UTC pour la date,
- *     getHours() local pour l'heure — incohérence corrigée ici)
- *   - fetch() au lieu de new Image() — promesse annulable, meilleure testabilité
+ * fetch() utilisé à la place de new Image() : promesse annulable, meilleure testabilité.
  */
 
 // Clés de stockage (compatibles avec le script inline ConsentBanner::tracker())
