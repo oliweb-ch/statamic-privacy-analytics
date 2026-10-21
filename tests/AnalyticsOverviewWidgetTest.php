@@ -76,7 +76,7 @@ class AnalyticsOverviewWidgetTest extends TestCase
         $html = $this->widget()->html();
 
         $this->assertStringContainsString(
-            'Analytiques',
+            'cp/statamic-analytics',
             $html,
             'Le widget doit rendre son HTML quand l\'utilisateur a analytics.view.'
         );
@@ -95,7 +95,7 @@ class AnalyticsOverviewWidgetTest extends TestCase
         $html = $this->widget()->html();
 
         $this->assertStringContainsString(
-            'Analytiques',
+            'cp/statamic-analytics',
             $html,
             'Le super-admin doit voir le widget sans permission explicite.'
         );
