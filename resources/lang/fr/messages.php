@@ -42,6 +42,14 @@ return [
     'requests_per_minute'   => 'requêtes/minute',
     'seconds'               => 'secondes',
 
+    // Avertissement identifiants MaxMind
+    'maxmind_warning_title'         => 'Géolocalisation MaxMind non configurée',
+    'maxmind_warning_missing'       => 'Le provider maxmind est actif mais ces identifiants sont absents :',
+    'maxmind_warning_empty_widgets' => 'Les widgets pays et villes resteront vides.',
+    'maxmind_warning_signup'        => 'Créer un compte gratuit MaxMind',
+    'maxmind_warning_disable'       => 'Pour désactiver proprement la géolocalisation et supprimer ce message, définissez',
+    'maxmind_warning_disable_hint'  => 'dans votre .env (les widgets géographiques seront alors masqués).',
+
     // Statistiques générales
     'total_visits'     => 'Visites totales',
     'unique_visitors'  => 'Visiteurs uniques',
@@ -110,9 +118,17 @@ return [
     'activity_heatmap' => 'Carte d\'activité',
     'low_activity'     => 'Faible',
     'high_activity'    => 'Élevée',
+    'day_mon'          => 'Lun',
+    'day_tue'          => 'Mar',
+    'day_wed'          => 'Mer',
+    'day_thu'          => 'Jeu',
+    'day_fri'          => 'Ven',
+    'day_sat'          => 'Sam',
+    'day_sun'          => 'Dim',
 
     // Temps réel (RealTimeWidget)
     'realtime_visitors' => 'Visiteurs en temps réel',
+    'live'              => 'EN DIRECT',
     'active_sessions'   => 'Sessions actives',
     'active_visitors'   => 'Visiteurs actifs',
     'page_views'        => 'Pages vues',
@@ -126,6 +142,11 @@ return [
     // Profondeur de session (SessionDepthWidget)
     'session_depth' => 'Profondeur de session',
     'pages_abbr'    => 'p.',
+
+    // Widget du tableau de bord (AnalyticsOverviewWidget)
+    'today'             => "Aujourd'hui",
+    'view_all'          => 'Voir tout',
+    'widget_load_error' => 'Impossible de charger les données analytiques.',
 
     // Panneau de paramètres du bandeau de consentement
     'essential_analytics'              => 'Analytiques essentielles',

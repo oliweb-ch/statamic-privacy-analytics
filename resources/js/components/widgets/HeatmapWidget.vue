@@ -37,7 +37,7 @@ const props = defineProps({
 })
 
 // dayLabels: 0=Mon … 6=Sun
-const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const dayLabels = computed(() => ['day_mon', 'day_tue', 'day_wed', 'day_thu', 'day_fri', 'day_sat', 'day_sun'].map(key => props.t(key)))
 
 // Build lookup map: "day_hour" => count
 const cellMap = computed(() => {

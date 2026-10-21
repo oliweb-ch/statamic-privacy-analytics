@@ -1,7 +1,7 @@
 <template>
     <div class="ea-card ea-realtime-card">
         <div class="ea-flex ea-items-center ea-gap-2 ea-mb-4">
-            <span class="ea-live-badge">LIVE</span>
+            <span class="ea-live-badge">{{ t('live') }}</span>
             <h3 class="ea-font-bold">{{ t('realtime_visitors') }}</h3>
         </div>
 
