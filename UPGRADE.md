@@ -1,5 +1,36 @@
 # Upgrade Guide
 
+## Upgrading to 4.11
+
+### No breaking changes
+
+v4.11 is fully backward-compatible. No migrations, no config changes, no action required for standard installations.
+
+### CP interface fully translated
+
+All remaining hard-coded strings in the Control Panel are now routed through `statamic-analytics::messages`, making every label locale-aware:
+
+- **Dashboard widget** (`analytics-overview.blade.php`): title, "View all" link, "Last 7 days" label, "Today" / "Page Views" / "Unique Visitors" stat captions, and the widget load error message.
+- **MaxMind credentials warning** (`Dashboard.vue`): the entire notice (title, body, sign-up link label, disable hint) is now translated.
+- **Heatmap day labels** (`HeatmapWidget.vue`): `Mon`…`Sun` are now locale keys (`day_mon`…`day_sun`).
+- **Real-time badge** (`RealTimeWidget.vue`): `LIVE` is now a locale key.
+
+New keys added to both `en` and `fr` (the two files keep identical key sets): `today`, `view_all`, `widget_load_error`, `live`, `day_mon` through `day_sun`, and six `maxmind_warning_*` keys. French values are identical to the strings that were previously hard-coded, so French control panels look exactly the same.
+
+**For addon users (Composer install):** no action required. The compiled JS bundle (`resources/dist/`) is shipped with the package.
+
+**For maintainers forking this addon:** run `npm run build` after pulling, then commit `resources/dist/` before tagging a release.
+
+### Composer constraint
+
+```bash
+composer require oliweb/statamic-privacy-analytics:^4.11
+```
+
+*Thanks [@trampish](https://github.com/trampish) for the contribution.*
+
+---
+
 ## Upgrading to 4.10
 
 ### No breaking changes

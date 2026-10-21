@@ -25,7 +25,7 @@ class AnalyticsOverviewWidget extends Widget
                 ->where('visited_at', '>=', Carbon::now()->subDays(7))
                 ->where('is_new_visitor', true)->count();
         } catch (\Exception $e) {
-            return '<p class="text-sm text-gray-400 p-4">Impossible de charger les données analytiques.</p>';
+            return '<p class="text-sm text-gray-400 p-4">' . e(__('statamic-analytics::messages.widget_load_error')) . '</p>';
         }
 
         return view('statamic-privacy-analytics::widgets.analytics-overview', [

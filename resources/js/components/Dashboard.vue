@@ -97,19 +97,19 @@
 
         <!-- MaxMind credentials warning -->
         <div v-if="config.geoWarning" class="ea-card" style="border-left: 4px solid #f59e0b; background: #fffbeb;">
-            <p class="ea-font-semibold" style="color: #92400e;">⚠ Géolocalisation MaxMind non configurée</p>
+            <p class="ea-font-semibold" style="color: #92400e;">⚠ {{ t('maxmind_warning_title') }}</p>
             <p class="ea-text-secondary" style="margin-top: 0.5rem;">
-                Le provider <code>maxmind</code> est actif mais les identifiants
-                <code>MAXMIND_ACCOUNT_ID</code> / <code>MAXMIND_LICENSE_KEY</code> sont absents.
-                Les widgets pays et villes resteront vides.
+                {{ t('maxmind_warning_missing') }}
+                <code>MAXMIND_ACCOUNT_ID</code> / <code>MAXMIND_LICENSE_KEY</code>.
+                {{ t('maxmind_warning_empty_widgets') }}
                 <a href="https://www.maxmind.com/en/geolite2/signup" target="_blank" style="color: #2563eb;">
-                    Créer un compte gratuit MaxMind
+                    {{ t('maxmind_warning_signup') }}
                 </a>.
             </p>
             <p class="ea-text-secondary" style="margin-top: 0.25rem;">
-                Pour désactiver proprement la géolocalisation et supprimer ce message,
-                définissez <code>ANALYTICS_GEO_PROVIDER=disabled</code> dans votre <code>.env</code>
-                (les widgets géographiques seront alors masqués).
+                {{ t('maxmind_warning_disable') }}
+                <code>ANALYTICS_GEO_PROVIDER=disabled</code>
+                {{ t('maxmind_warning_disable_hint') }}
             </p>
         </div>
 

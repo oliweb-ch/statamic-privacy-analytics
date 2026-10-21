@@ -42,6 +42,14 @@ return [
     'requests_per_minute'   => 'requests/minute',
     'seconds'               => 'seconds',
 
+    // MaxMind credentials warning
+    'maxmind_warning_title'         => 'MaxMind geolocation is not configured',
+    'maxmind_warning_missing'       => 'The maxmind provider is active, but these credentials are missing:',
+    'maxmind_warning_empty_widgets' => 'The country and city widgets will stay empty.',
+    'maxmind_warning_signup'        => 'Create a free MaxMind account',
+    'maxmind_warning_disable'       => 'To turn geolocation off and hide this message, set',
+    'maxmind_warning_disable_hint'  => 'in your .env file (the location widgets are then hidden).',
+
     // Overview stats
     'total_visits'    => 'Total Visits',
     'unique_visitors' => 'Unique Visitors',
@@ -110,9 +118,17 @@ return [
     'activity_heatmap' => 'Activity Heatmap',
     'low_activity'     => 'Low',
     'high_activity'    => 'High',
+    'day_mon'          => 'Mon',
+    'day_tue'          => 'Tue',
+    'day_wed'          => 'Wed',
+    'day_thu'          => 'Thu',
+    'day_fri'          => 'Fri',
+    'day_sat'          => 'Sat',
+    'day_sun'          => 'Sun',
 
     // Realtime (RealTimeWidget)
     'realtime_visitors' => 'Real-Time Visitors',
+    'live'              => 'LIVE',
     'active_sessions'   => 'Active Sessions',
     'active_visitors'   => 'Active Visitors',
     'page_views'        => 'Page Views',
@@ -126,6 +142,11 @@ return [
     // Session depth (SessionDepthWidget)
     'session_depth' => 'Session Depth',
     'pages_abbr'    => 'p.',
+
+    // Dashboard widget (AnalyticsOverviewWidget)
+    'today'             => 'Today',
+    'view_all'          => 'View all',
+    'widget_load_error' => 'Could not load analytics data.',
 
     // Consent banner settings panel
     'essential_analytics'              => 'Essential Analytics',
