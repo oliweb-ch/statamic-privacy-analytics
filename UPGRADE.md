@@ -21,6 +21,14 @@ New keys added to both `en` and `fr` (the two files keep identical key sets): `t
 
 **For maintainers forking this addon:** run `npm run build` after pulling, then commit `resources/dist/` before tagging a release.
 
+### Security (maintainers / forks)
+
+Vite has been updated from 7.3.1 to **7.3.8** to address [CVE AIKIDO-2026-137384](https://www.aikido.dev/cve/AIKIDO-2026-137384): unescaped module IDs in virtual modules could allow code injection and arbitrary file exposure when the dev server is exposed via `--host`.
+
+This is a **build-time devDependency only**. The compiled bundle shipped with the package is unaffected. End users (Composer installs) have no action to take.
+
+**For maintainers forking this addon:** `npm install` after pulling to get the patched Vite. `npm run build` before tagging a release.
+
 ### Composer constraint
 
 ```bash
